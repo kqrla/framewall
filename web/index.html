@@ -1,0 +1,1889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>museum wall & frame generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Poppins', sans-serif;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: #f5f5f5;
+  color: #ccc;
+  text-transform: lowercase;
+  font-size: 13px;
+}
+
+/* ── sidebar ── */
+.sidebar {
+  width: 340px;
+  min-width: 340px;
+  background: #1e1e1e;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  border-right: 1px solid #333;
+}
+
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-track { background: #1e1e1e; }
+.sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+.sidebar-header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid #333;
+}
+
+.sidebar-header h1 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.sidebar-header p {
+  font-size: 11px;
+  color: #888;
+}
+
+/* mode toggle */
+.mode-toggle {
+  display: flex;
+  margin: 16px 20px;
+  background: #111;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+  background: transparent;
+  border: none;
+  color: #888;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-transform: lowercase;
+  transition: all 0.2s;
+}
+
+.mode-btn.active {
+  background: #0d99ff;
+  color: #fff;
+  font-weight: 500;
+}
+
+/* controls area */
+.controls {
+  flex: 1;
+  padding: 0 20px 20px;
+  overflow-y: auto;
+}
+
+/* collapsible section */
+.section {
+  border-bottom: 1px solid #2a2a2a;
+  padding: 12px 0;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 0;
+}
+
+.section-header h3 {
+  font-size: 12px;
+  font-weight: 500;
+  color: #aaa;
+}
+
+.section-header .chevron {
+  font-size: 10px;
+  color: #666;
+  transition: transform 0.2s;
+}
+
+.section.collapsed .chevron { transform: rotate(-90deg); }
+.section.collapsed .section-body { display: none; }
+
+.section-body {
+  padding-top: 10px;
+}
+
+/* form elements */
+label.field-label {
+  display: block;
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 4px;
+  margin-top: 10px;
+}
+
+label.field-label:first-child { margin-top: 0; }
+
+select, input[type="text"], input[type="number"] {
+  width: 100%;
+  padding: 8px 10px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #ddd;
+  font-family: inherit;
+  font-size: 12px;
+  text-transform: lowercase;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+select:focus, input:focus {
+  border-color: #0d99ff;
+}
+
+select { cursor: pointer; }
+
+input[type="number"] { -moz-appearance: textfield; }
+input[type="number"]::-webkit-inner-spin-button { opacity: 1; }
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.checkbox-row input[type="checkbox"] {
+  accent-color: #0d99ff;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.checkbox-row span {
+  font-size: 12px;
+  color: #bbb;
+}
+
+/* color swatches */
+.swatch-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+}
+
+.swatch:hover { transform: scale(1.1); }
+.swatch.active { border-color: #0d99ff; }
+
+.hex-input-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  align-items: center;
+}
+
+.hex-input-row span {
+  color: #666;
+  font-size: 12px;
+}
+
+.hex-input-row input {
+  flex: 1;
+}
+
+/* dimension inputs */
+.dim-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.dim-row input { flex: 1; }
+.dim-row span { color: #666; font-size: 14px; }
+
+/* preset pills */
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.preset-pill {
+  padding: 6px 10px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 16px;
+  color: #aaa;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  text-transform: lowercase;
+  transition: all 0.15s;
+}
+
+.preset-pill:hover { border-color: #0d99ff; color: #fff; }
+.preset-pill.active { background: #0d99ff; border-color: #0d99ff; color: #fff; }
+
+/* profile stack */
+.profile-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+  min-height: 28px;
+}
+
+.profile-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #2a2a2a;
+  border-radius: 12px;
+  font-size: 11px;
+  color: #bbb;
+}
+
+.profile-tag .remove-profile {
+  cursor: pointer;
+  color: #888;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.profile-tag .remove-profile:hover { color: #ff4444; }
+
+.add-profile-row {
+  display: flex;
+  gap: 6px;
+}
+
+.add-profile-row select { flex: 1; }
+
+.add-btn {
+  padding: 6px 12px;
+  background: #0d99ff;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  text-transform: lowercase;
+  white-space: nowrap;
+}
+
+.add-btn:hover { background: #0b85e0; }
+
+/* ornament zone row */
+.zone-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.zone-label {
+  font-size: 11px;
+  color: #666;
+  width: 14px;
+  text-align: center;
+}
+
+.zone-row select { flex: 1; }
+
+/* bottom buttons */
+.bottom-buttons {
+  padding: 16px 20px;
+  border-top: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-generate, .btn-download {
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-transform: lowercase;
+  transition: background 0.2s;
+}
+
+.btn-generate {
+  background: #0d99ff;
+  color: #fff;
+}
+
+.btn-generate:hover { background: #0b85e0; }
+
+.btn-download {
+  background: #333;
+  color: #ccc;
+}
+
+.btn-download:hover { background: #444; }
+
+/* ── canvas area ── */
+.canvas-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: #f5f5f5;
+  overflow: hidden;
+}
+
+.canvas-wrapper {
+  max-width: 100%;
+  max-height: 100%;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+}
+
+canvas {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 80px);
+  object-fit: contain;
+}
+</style>
+</head>
+<body>
+
+<!-- sidebar -->
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1>museum wall & frame generator</h1>
+    <p>generate museum walls and ornate picture frames</p>
+  </div>
+
+  <div class="mode-toggle">
+    <button class="mode-btn active" data-mode="background">background</button>
+    <button class="mode-btn" data-mode="frames">frames</button>
+  </div>
+
+  <div class="controls" id="controls"></div>
+
+  <div class="bottom-buttons">
+    <button class="btn-generate" id="btn-generate">generate</button>
+    <button class="btn-download" id="btn-download">download png</button>
+  </div>
+</div>
+
+<!-- canvas area -->
+<div class="canvas-area">
+  <div class="canvas-wrapper">
+    <canvas id="canvas"></canvas>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// helpers
+// ════════════════════════════════════════════════════════════════
+
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => [...document.querySelectorAll(sel)];
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const hexToRgb = (hex) => {
+  const h = hex.replace('#', '');
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+};
+const rgbToHex = (r, g, b) => '#' + [r,g,b].map(v => clamp(Math.round(v),0,255).toString(16).padStart(2,'0')).join('');
+const shadeColor = (hex, amt) => {
+  const [r,g,b] = hexToRgb(hex);
+  return rgbToHex(r+amt, g+amt, b+amt);
+};
+const mulColor = (hex, factor) => {
+  const [r,g,b] = hexToRgb(hex);
+  return rgbToHex(r*factor, g*factor, b*factor);
+};
+
+const seededRandom = (seed) => {
+  let s = seed;
+  return () => { s = (s * 16807 + 0) % 2147483647; return (s - 1) / 2147483646; };
+};
+
+// ════════════════════════════════════════════════════════════════
+// palette
+// ════════════════════════════════════════════════════════════════
+
+const PAL = {
+  wallColors: [
+    '#8B0000','#800020','#4A0028','#722F37','#960018',
+    '#003153','#00416A','#1B4D3E','#2E4053','#36454F',
+    '#4B3621','#704214','#8B6914','#556B2F','#2F4F4F',
+    '#F5F0E1','#FAF0E6','#FFF8DC','#F0EAD6','#EDEAE0',
+    '#DAA520','#C5B358','#E6BE8A','#B8860B','#CFB53B',
+    '#708090','#808080','#A9A9A9','#696969','#778899',
+    '#800080','#9B59B6','#8E4585','#6A0DAD','#7851A9',
+    '#FF6347','#E2725B','#CC5500','#D2691E','#CD853F',
+    '#FFC0CB','#FFB6C1','#FF69B4','#DB7093','#C08081'
+  ],
+  lowerWallColors: [
+    '#F5F0E1','#EDEAE0','#FAF0E6','#FFF8DC','#D3C6AA',
+    '#2F1E14','#3E2723','#4A3728','#5C4033','#6B4423',
+    '#708090','#808080','#A9A9A9','#BEBEBE','#C0C0C0',
+    '#F5F5DC','#F0EAD6','#E8DCC8','#D2C4A8','#C4B896'
+  ],
+  baseboardColors: ['#F5F0E1','#2F1E14','#EDEAE0','#3E2723','#808080','#333333'],
+  frameFinishes: {
+    'gold leaf': '#DAA520',
+    'antique gold': '#B8860B',
+    'champagne gold': '#D4AF37',
+    'silver leaf': '#C0C0C0',
+    'bronze': '#8B6914',
+    'black lacquer': '#1a1a1a',
+    'white': '#F5F0E1',
+    'oak': '#C19A6B',
+    'walnut': '#5C4033',
+    'mahogany': '#4E1609'
+  }
+};
+
+// ════════════════════════════════════════════════════════════════
+// state
+// ════════════════════════════════════════════════════════════════
+
+let currentMode = 'background';
+
+const bgState = {
+  wallType: 'painted',
+  wallSubType: 'damask',
+  wallColor: '#8B0000',
+  dividerEnabled: true,
+  dividerType: 'chair rail',
+  lowerEnabled: true,
+  lowerType: 'raised panel',
+  lowerColor: '#F5F0E1',
+  baseboardEnabled: true,
+  baseboardColor: '#F5F0E1',
+  width: 1778,
+  height: 1000
+};
+
+const frameState = {
+  preset: '',
+  profiles: ['ogee','cushion','fillet','bead'],
+  ornamentA: 'egg-and-dart',
+  ornamentB: 'acanthus',
+  ornamentC: 'bead',
+  ornamentD: 'none',
+  corners: 'floral burst',
+  finish: 'gold leaf',
+  liner: 'linen',
+  aging: 'light',
+  width: 400,
+  height: 500
+};
+
+const wallSubTypes = {
+  painted: [],
+  wallpaper: ['damask','morris','stripes','flock','toile','brocade','leather'],
+  wood: ['oak planks','walnut planks','mahogany planks'],
+  fabric: ['silk','velvet','linen']
+};
+
+const profileOptions = ['flat','ogee','cushion','scoop','reverse scoop','bead','bolection','fillet','astragal','cavetto','scotia','chamfer','bevel','torus','quirk'];
+const ornamentOptions = ['none','bead','bead & reel','egg-and-dart','acanthus','scrolls','shell','rope','laurel','greek key','guilloche','floral','vine'];
+const cornerOptions = ['plain miter','floral burst','shell','cartouche','acanthus cluster','scroll volute'];
+const linerOptions = ['none','linen','velvet','gold liner'];
+const agingOptions = ['none','light','medium','heavy'];
+const lowerWallTypes = ['beadboard','raised panel','flat panel','board & batten','stone','marble','wood planks'];
+const dividerTypes = ['chair rail','molding','picture rail'];
+
+const presets = {
+  'renaissance': { profiles: ['ogee','flat','bead','fillet'], ornamentA: 'egg-and-dart', ornamentB: 'acanthus', ornamentC: 'bead', ornamentD: 'none', corners: 'acanthus cluster', finish: 'gold leaf', liner: 'linen', aging: 'medium' },
+  'baroque': { profiles: ['bolection','ogee','cushion','bead','fillet'], ornamentA: 'acanthus', ornamentB: 'scrolls', ornamentC: 'shell', ornamentD: 'bead', corners: 'scroll volute', finish: 'gold leaf', liner: 'velvet', aging: 'light' },
+  'rococo': { profiles: ['cushion','scoop','ogee','fillet'], ornamentA: 'scrolls', ornamentB: 'shell', ornamentC: 'floral', ornamentD: 'vine', corners: 'shell', finish: 'champagne gold', liner: 'linen', aging: 'light' },
+  'neoclassical': { profiles: ['flat','ogee','fillet','bead'], ornamentA: 'greek key', ornamentB: 'laurel', ornamentC: 'bead & reel', ornamentD: 'none', corners: 'plain miter', finish: 'antique gold', liner: 'linen', aging: 'none' },
+  'victorian': { profiles: ['ogee','cushion','scoop','bead','fillet'], ornamentA: 'egg-and-dart', ornamentB: 'floral', ornamentC: 'vine', ornamentD: 'bead', corners: 'floral burst', finish: 'walnut', liner: 'velvet', aging: 'medium' },
+  'arts & crafts': { profiles: ['flat','chamfer','flat','fillet'], ornamentA: 'none', ornamentB: 'none', ornamentC: 'none', ornamentD: 'none', corners: 'plain miter', finish: 'oak', liner: 'none', aging: 'light' },
+  'modern gallery': { profiles: ['flat','fillet'], ornamentA: 'none', ornamentB: 'none', ornamentC: 'none', ornamentD: 'none', corners: 'plain miter', finish: 'white', liner: 'none', aging: 'none' }
+};
+
+// ════════════════════════════════════════════════════════════════
+// ui building
+// ════════════════════════════════════════════════════════════════
+
+const buildSelect = (id, options, value) => {
+  const opts = options.map(o => `<option value="${o}" ${o === value ? 'selected' : ''}>${o}</option>`).join('');
+  return `<select id="${id}">${opts}</select>`;
+};
+
+const buildSwatches = (id, colors, value) => {
+  const swatches = colors.map(c =>
+    `<div class="swatch ${c === value ? 'active' : ''}" data-group="${id}" data-color="${c}" style="background:${c}" title="${c}"></div>`
+  ).join('');
+  return `<div class="swatch-grid" data-group="${id}">${swatches}</div>
+  <div class="hex-input-row"><span>#</span><input type="text" id="${id}-hex" value="${value.replace('#','')}" maxlength="6"></div>`;
+};
+
+const buildSection = (title, id, body, collapsed = false) =>
+  `<div class="section ${collapsed ? 'collapsed' : ''}" id="section-${id}">
+    <div class="section-header" data-section="${id}">
+      <h3>${title}</h3>
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="section-body">${body}</div>
+  </div>`;
+
+const renderBackgroundControls = () => {
+  const wallTypeOpts = ['painted','wallpaper','wood','fabric'];
+  const subTypes = wallSubTypes[bgState.wallType] || [];
+  const showSub = subTypes.length > 0;
+
+  let wallBody = `<label class="field-label">type</label>${buildSelect('wall-type', wallTypeOpts, bgState.wallType)}`;
+  if (showSub) {
+    wallBody += `<label class="field-label">sub-type</label>${buildSelect('wall-subtype', subTypes, bgState.wallSubType)}`;
+  }
+  wallBody += `<label class="field-label">color</label>${buildSwatches('wall-color', PAL.wallColors.slice(0,20), bgState.wallColor)}`;
+
+  let divBody = `<div class="checkbox-row"><input type="checkbox" id="divider-enabled" ${bgState.dividerEnabled ? 'checked' : ''}><span>enabled</span></div>`;
+  divBody += `<label class="field-label">type</label>${buildSelect('divider-type', dividerTypes, bgState.dividerType)}`;
+
+  let lowerBody = `<div class="checkbox-row"><input type="checkbox" id="lower-enabled" ${bgState.lowerEnabled ? 'checked' : ''}><span>enabled</span></div>`;
+  lowerBody += `<label class="field-label">type</label>${buildSelect('lower-type', lowerWallTypes, bgState.lowerType)}`;
+  lowerBody += `<label class="field-label">color</label>${buildSwatches('lower-color', PAL.lowerWallColors, bgState.lowerColor)}`;
+
+  let baseBody = `<div class="checkbox-row"><input type="checkbox" id="base-enabled" ${bgState.baseboardEnabled ? 'checked' : ''}><span>enabled</span></div>`;
+  baseBody += `<label class="field-label">color</label>${buildSwatches('base-color', PAL.baseboardColors, bgState.baseboardColor)}`;
+
+  let dimBody = `<label class="field-label">canvas size</label><div class="dim-row"><input type="number" id="bg-w" value="${bgState.width}" min="100" max="4000"><span>x</span><input type="number" id="bg-h" value="${bgState.height}" min="100" max="4000"></div>`;
+
+  return buildSection('wall covering', 'wall', wallBody)
+    + buildSection('divider', 'divider', divBody)
+    + buildSection('lower wall', 'lower', lowerBody)
+    + buildSection('baseboard', 'baseboard', baseBody)
+    + buildSection('dimensions', 'bg-dim', dimBody);
+};
+
+const renderFrameControls = () => {
+  // presets
+  let presetsHtml = `<div class="preset-row">`;
+  for (const name of Object.keys(presets)) {
+    presetsHtml += `<button class="preset-pill ${frameState.preset === name ? 'active' : ''}" data-preset="${name}">${name}</button>`;
+  }
+  presetsHtml += `</div>`;
+
+  // profile stack
+  let profileHtml = `<div class="profile-stack" id="profile-stack">`;
+  frameState.profiles.forEach((p, i) => {
+    profileHtml += `<span class="profile-tag">${p}<span class="remove-profile" data-idx="${i}">&times;</span></span>`;
+  });
+  profileHtml += `</div>`;
+  profileHtml += `<div class="add-profile-row">${buildSelect('add-profile-sel', profileOptions, profileOptions[0])}<button class="add-btn" id="add-profile-btn">+ add</button></div>`;
+
+  // ornament zones
+  let ornHtml = '';
+  ['A','B','C','D'].forEach(z => {
+    const key = `ornament${z}`;
+    ornHtml += `<div class="zone-row"><span class="zone-label">${z.toLowerCase()}</span>${buildSelect(`orn-${z}`, ornamentOptions, frameState[key])}</div>`;
+  });
+
+  // corners
+  let cornerHtml = buildSelect('frame-corners', cornerOptions, frameState.corners);
+
+  // finish
+  const finishNames = Object.keys(PAL.frameFinishes);
+  const finishColors = finishNames.map(n => PAL.frameFinishes[n]);
+  let finishHtml = `<div class="swatch-grid" data-group="frame-finish">`;
+  finishNames.forEach((n, i) => {
+    finishHtml += `<div class="swatch ${frameState.finish === n ? 'active' : ''}" data-group="frame-finish" data-color="${finishColors[i]}" data-name="${n}" style="background:${finishColors[i]}" title="${n}"></div>`;
+  });
+  finishHtml += `</div>`;
+
+  // liner, aging
+  let linerHtml = buildSelect('frame-liner', linerOptions, frameState.liner);
+  let agingHtml = buildSelect('frame-aging', agingOptions, frameState.aging);
+
+  // dims
+  let dimHtml = `<div class="dim-row"><input type="number" id="fr-w" value="${frameState.width}" min="50" max="2000"><span>x</span><input type="number" id="fr-h" value="${frameState.height}" min="50" max="2000"></div>`;
+
+  return presetsHtml
+    + buildSection('profile stack', 'profiles', profileHtml)
+    + buildSection('ornament zones', 'ornaments', ornHtml)
+    + buildSection('corners', 'corners', cornerHtml)
+    + buildSection('finish', 'finish', finishHtml)
+    + buildSection('liner', 'liner', linerHtml)
+    + buildSection('aging', 'aging', agingHtml)
+    + buildSection('dimensions', 'fr-dim', dimHtml);
+};
+
+const rebuildControls = () => {
+  const el = $('#controls');
+  el.innerHTML = currentMode === 'background' ? renderBackgroundControls() : renderFrameControls();
+  attachControlListeners();
+};
+
+// ════════════════════════════════════════════════════════════════
+// event wiring
+// ════════════════════════════════════════════════════════════════
+
+const attachControlListeners = () => {
+  // section collapse
+  $$('.section-header').forEach(h => {
+    h.addEventListener('click', () => {
+      h.parentElement.classList.toggle('collapsed');
+    });
+  });
+
+  // swatch clicks
+  $$('.swatch').forEach(s => {
+    s.addEventListener('click', () => {
+      const group = s.dataset.group;
+      $$(`.swatch[data-group="${group}"]`).forEach(x => x.classList.remove('active'));
+      s.classList.add('active');
+      const color = s.dataset.color;
+      const hexInput = $(`#${group}-hex`);
+      if (hexInput) hexInput.value = color.replace('#','');
+
+      if (group === 'wall-color') bgState.wallColor = color;
+      else if (group === 'lower-color') bgState.lowerColor = color;
+      else if (group === 'base-color') bgState.baseboardColor = color;
+      else if (group === 'frame-finish') {
+        frameState.finish = s.dataset.name || Object.keys(PAL.frameFinishes).find(k => PAL.frameFinishes[k] === color) || 'gold leaf';
+      }
+      scheduleRender();
+    });
+  });
+
+  // hex inputs
+  $$('.hex-input-row input').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const val = '#' + inp.value.replace('#','');
+      const group = inp.id.replace('-hex','');
+      if (group === 'wall-color') bgState.wallColor = val;
+      else if (group === 'lower-color') bgState.lowerColor = val;
+      else if (group === 'base-color') bgState.baseboardColor = val;
+      scheduleRender();
+    });
+  });
+
+  // background controls
+  if (currentMode === 'background') {
+    const wallType = $('#wall-type');
+    if (wallType) wallType.addEventListener('change', () => { bgState.wallType = wallType.value; bgState.wallSubType = (wallSubTypes[wallType.value]||[])[0]||''; rebuildControls(); scheduleRender(); });
+    const wallSub = $('#wall-subtype');
+    if (wallSub) wallSub.addEventListener('change', () => { bgState.wallSubType = wallSub.value; scheduleRender(); });
+    const divEn = $('#divider-enabled');
+    if (divEn) divEn.addEventListener('change', () => { bgState.dividerEnabled = divEn.checked; scheduleRender(); });
+    const divType = $('#divider-type');
+    if (divType) divType.addEventListener('change', () => { bgState.dividerType = divType.value; scheduleRender(); });
+    const lwEn = $('#lower-enabled');
+    if (lwEn) lwEn.addEventListener('change', () => { bgState.lowerEnabled = lwEn.checked; scheduleRender(); });
+    const lwType = $('#lower-type');
+    if (lwType) lwType.addEventListener('change', () => { bgState.lowerType = lwType.value; scheduleRender(); });
+    const bsEn = $('#base-enabled');
+    if (bsEn) bsEn.addEventListener('change', () => { bgState.baseboardEnabled = bsEn.checked; scheduleRender(); });
+    const bgW = $('#bg-w');
+    if (bgW) bgW.addEventListener('change', () => { bgState.width = parseInt(bgW.value)||1778; scheduleRender(); });
+    const bgH = $('#bg-h');
+    if (bgH) bgH.addEventListener('change', () => { bgState.height = parseInt(bgH.value)||1000; scheduleRender(); });
+  }
+
+  // frame controls
+  if (currentMode === 'frames') {
+    $$('.preset-pill').forEach(p => {
+      p.addEventListener('click', () => {
+        const name = p.dataset.preset;
+        const pr = presets[name];
+        if (!pr) return;
+        frameState.preset = name;
+        Object.assign(frameState, { ...pr, profiles: [...pr.profiles] });
+        rebuildControls();
+        scheduleRender();
+      });
+    });
+
+    $$('.remove-profile').forEach(r => {
+      r.addEventListener('click', (e) => {
+        e.stopPropagation();
+        frameState.profiles.splice(parseInt(r.dataset.idx), 1);
+        rebuildControls();
+        scheduleRender();
+      });
+    });
+
+    const addBtn = $('#add-profile-btn');
+    if (addBtn) addBtn.addEventListener('click', () => {
+      const sel = $('#add-profile-sel');
+      if (sel && frameState.profiles.length < 8) {
+        frameState.profiles.push(sel.value);
+        rebuildControls();
+        scheduleRender();
+      }
+    });
+
+    ['A','B','C','D'].forEach(z => {
+      const sel = $(`#orn-${z}`);
+      if (sel) sel.addEventListener('change', () => { frameState[`ornament${z}`] = sel.value; scheduleRender(); });
+    });
+
+    const cornSel = $('#frame-corners');
+    if (cornSel) cornSel.addEventListener('change', () => { frameState.corners = cornSel.value; scheduleRender(); });
+    const linerSel = $('#frame-liner');
+    if (linerSel) linerSel.addEventListener('change', () => { frameState.liner = linerSel.value; scheduleRender(); });
+    const agingSel = $('#frame-aging');
+    if (agingSel) agingSel.addEventListener('change', () => { frameState.aging = agingSel.value; scheduleRender(); });
+    const frW = $('#fr-w');
+    if (frW) frW.addEventListener('change', () => { frameState.width = parseInt(frW.value)||400; scheduleRender(); });
+    const frH = $('#fr-h');
+    if (frH) frH.addEventListener('change', () => { frameState.height = parseInt(frH.value)||500; scheduleRender(); });
+  }
+};
+
+// ════════════════════════════════════════════════════════════════
+// wall drawing
+// ════════════════════════════════════════════════════════════════
+
+const drawWall = (ctx, w, h) => {
+  const wallColor = bgState.wallColor;
+  const rand = seededRandom(42);
+
+  // fill background
+  ctx.fillStyle = wallColor;
+  ctx.fillRect(0, 0, w, h);
+
+  // determine zones
+  const baseH = bgState.baseboardEnabled ? 30 : 0;
+  const dividerH = bgState.dividerEnabled ? 20 : 0;
+  const lowerH = bgState.lowerEnabled ? h * 0.32 : 0;
+  const wallTop = 0;
+  const wallBottom = h - lowerH - dividerH - baseH;
+
+  // draw wall covering pattern on upper wall
+  drawWallPattern(ctx, 0, wallTop, w, wallBottom, wallColor, bgState.wallType, bgState.wallSubType, rand);
+
+  // lower wall
+  if (bgState.lowerEnabled) {
+    const ly = h - lowerH - baseH;
+    drawLowerWall(ctx, 0, ly, w, lowerH, bgState.lowerColor, bgState.lowerType, rand);
+  }
+
+  // divider
+  if (bgState.dividerEnabled) {
+    const dy = h - lowerH - dividerH - baseH;
+    drawDivider(ctx, 0, dy, w, dividerH, bgState.dividerType, wallColor);
+  }
+
+  // baseboard
+  if (bgState.baseboardEnabled) {
+    drawBaseboard(ctx, 0, h - baseH, w, baseH, bgState.baseboardColor);
+  }
+};
+
+const drawWallPattern = (ctx, x, y, w, h, color, type, subType, rand) => {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w, h);
+
+  const [cr, cg, cb] = hexToRgb(color);
+
+  if (type === 'painted') {
+    // subtle texture with noise
+    for (let i = 0; i < 800; i++) {
+      const px = x + rand() * w;
+      const py = y + rand() * h;
+      const a = 0.02 + rand() * 0.03;
+      ctx.fillStyle = `rgba(${rand()>0.5?255:0},${rand()>0.5?255:0},${rand()>0.5?255:0},${a})`;
+      ctx.fillRect(px, py, 2, 2);
+    }
+  } else if (type === 'wallpaper') {
+    drawWallpaperPattern(ctx, x, y, w, h, color, subType, rand);
+  } else if (type === 'wood') {
+    drawWoodPattern(ctx, x, y, w, h, color, rand);
+  } else if (type === 'fabric') {
+    drawFabricPattern(ctx, x, y, w, h, color, subType, rand);
+  }
+
+  ctx.restore();
+};
+
+const drawWallpaperPattern = (ctx, x, y, w, h, color, sub, rand) => {
+  const light = shadeColor(color, 20);
+  const dark = shadeColor(color, -15);
+
+  if (sub === 'damask' || sub === '') {
+    // damask medallion pattern
+    const spacingX = 180;
+    const spacingY = 200;
+    for (let row = -1; row < h / spacingY + 1; row++) {
+      for (let col = -1; col < w / spacingX + 1; col++) {
+        const cx = x + col * spacingX + (row % 2 === 0 ? 0 : spacingX / 2);
+        const cy = y + row * spacingY;
+        drawDamaskMedallion(ctx, cx, cy, light, dark, 0.4);
+      }
+    }
+  } else if (sub === 'morris') {
+    // william morris botanical
+    const sp = 140;
+    for (let row = -1; row < h / sp + 1; row++) {
+      for (let col = -1; col < w / sp + 1; col++) {
+        const cx = x + col * sp + (row % 2 === 0 ? 0 : sp / 2);
+        const cy = y + row * sp;
+        drawMorrisMotif(ctx, cx, cy, light, dark);
+      }
+    }
+  } else if (sub === 'stripes') {
+    const sw = 40;
+    for (let sx = x; sx < x + w; sx += sw * 2) {
+      ctx.fillStyle = light;
+      ctx.globalAlpha = 0.25;
+      ctx.fillRect(sx, y, sw, h);
+    }
+    ctx.globalAlpha = 1;
+  } else if (sub === 'flock') {
+    const spacingX = 160;
+    const spacingY = 180;
+    for (let row = -1; row < h / spacingY + 1; row++) {
+      for (let col = -1; col < w / spacingX + 1; col++) {
+        const cx = x + col * spacingX + (row % 2 === 0 ? 0 : spacingX / 2);
+        const cy = y + row * spacingY;
+        drawDamaskMedallion(ctx, cx, cy, light, dark, 0.55);
+      }
+    }
+  } else if (sub === 'toile') {
+    const sp = 200;
+    for (let row = -1; row < h / sp + 1; row++) {
+      for (let col = -1; col < w / sp + 1; col++) {
+        const cx = x + col * sp + (row % 2 === 0 ? 0 : sp * 0.4);
+        const cy = y + row * sp;
+        drawToileScene(ctx, cx, cy, dark);
+      }
+    }
+  } else if (sub === 'brocade') {
+    const sp = 200;
+    for (let row = -1; row < h / sp + 1; row++) {
+      for (let col = -1; col < w / sp + 1; col++) {
+        const cx = x + col * sp + (row % 2 === 0 ? 0 : sp / 2);
+        const cy = y + row * sp;
+        drawBrocadeMedallion(ctx, cx, cy, light, '#DAA520');
+      }
+    }
+  } else if (sub === 'leather') {
+    const tileSize = 80;
+    for (let row = 0; row < h / tileSize + 1; row++) {
+      for (let col = 0; col < w / tileSize + 1; col++) {
+        const tx = x + col * tileSize;
+        const ty = y + row * tileSize;
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(tx + 4, ty + 4, tileSize - 8, tileSize - 8);
+        ctx.strokeStyle = light;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(tx + 6, ty + 6, tileSize - 12, tileSize - 12);
+      }
+    }
+  }
+};
+
+const drawDamaskMedallion = (ctx, cx, cy, light, dark, alpha) => {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  // central cartouche
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 70);
+  ctx.bezierCurveTo(cx + 40, cy - 60, cx + 50, cy - 30, cx + 45, cy);
+  ctx.bezierCurveTo(cx + 50, cy + 30, cx + 40, cy + 60, cx, cy + 70);
+  ctx.bezierCurveTo(cx - 40, cy + 60, cx - 50, cy + 30, cx - 45, cy);
+  ctx.bezierCurveTo(cx - 50, cy - 30, cx - 40, cy - 60, cx, cy - 70);
+  ctx.fillStyle = light;
+  ctx.fill();
+
+  // scrollwork sides
+  ctx.beginPath();
+  ctx.moveTo(cx + 45, cy - 20);
+  ctx.bezierCurveTo(cx + 65, cy - 30, cx + 70, cy - 10, cx + 60, cy);
+  ctx.bezierCurveTo(cx + 70, cy + 10, cx + 65, cy + 30, cx + 45, cy + 20);
+  ctx.fillStyle = dark;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(cx - 45, cy - 20);
+  ctx.bezierCurveTo(cx - 65, cy - 30, cx - 70, cy - 10, cx - 60, cy);
+  ctx.bezierCurveTo(cx - 70, cy + 10, cx - 65, cy + 30, cx - 45, cy + 20);
+  ctx.fill();
+
+  // small dots above and below
+  ctx.beginPath();
+  ctx.arc(cx, cy - 85, 4, 0, Math.PI * 2);
+  ctx.arc(cx, cy + 85, 4, 0, Math.PI * 2);
+  ctx.fillStyle = light;
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+};
+
+const drawMorrisMotif = (ctx, cx, cy, light, dark) => {
+  ctx.save();
+  ctx.globalAlpha = 0.35;
+
+  // stem
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy + 50);
+  ctx.bezierCurveTo(cx + 10, cy + 20, cx - 10, cy - 10, cx, cy - 50);
+  ctx.stroke();
+
+  // paired leaves
+  for (let i = -1; i <= 1; i += 2) {
+    ctx.beginPath();
+    ctx.ellipse(cx + i * 20, cy - 10, 18, 8, i * 0.5, 0, Math.PI * 2);
+    ctx.fillStyle = light;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx + i * 15, cy + 20, 14, 6, i * -0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // flower dot
+  ctx.beginPath();
+  ctx.arc(cx, cy - 45, 6, 0, Math.PI * 2);
+  ctx.fillStyle = dark;
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+};
+
+const drawToileScene = (ctx, cx, cy, dark) => {
+  ctx.save();
+  ctx.globalAlpha = 0.2;
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = 1.5;
+  ctx.fillStyle = dark;
+
+  // simple pastoral: tree + figure outline
+  // tree
+  ctx.beginPath();
+  ctx.moveTo(cx - 5, cy + 40);
+  ctx.lineTo(cx - 5, cy - 10);
+  ctx.lineTo(cx + 5, cy - 10);
+  ctx.lineTo(cx + 5, cy + 40);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx, cy - 30, 25, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx - 15, cy - 20, 18, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx + 15, cy - 20, 18, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // figure
+  ctx.beginPath();
+  ctx.arc(cx + 50, cy + 10, 8, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx + 50, cy + 18);
+  ctx.lineTo(cx + 50, cy + 45);
+  ctx.moveTo(cx + 40, cy + 30);
+  ctx.lineTo(cx + 60, cy + 30);
+  ctx.stroke();
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+};
+
+const drawBrocadeMedallion = (ctx, cx, cy, light, gold) => {
+  ctx.save();
+  ctx.globalAlpha = 0.4;
+
+  ctx.beginPath();
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const r = 40 + Math.sin(i * 3) * 10;
+    const px = cx + Math.cos(a) * r;
+    const py = cy + Math.sin(a) * r;
+    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fillStyle = gold;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, 20, 0, Math.PI * 2);
+  ctx.fillStyle = light;
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+};
+
+const drawWoodPattern = (ctx, x, y, w, h, color, rand) => {
+  const plankH = 60;
+  const light = shadeColor(color, 15);
+  const dark = shadeColor(color, -15);
+
+  for (let py = y; py < y + h; py += plankH) {
+    // plank base
+    const plankColor = rand() > 0.5 ? light : dark;
+    ctx.fillStyle = plankColor;
+    ctx.fillRect(x, py, w, plankH - 2);
+
+    // grain lines
+    ctx.strokeStyle = shadeColor(plankColor, -10);
+    ctx.lineWidth = 0.5;
+    ctx.globalAlpha = 0.3;
+    for (let g = 0; g < 5; g++) {
+      const gy = py + rand() * plankH;
+      ctx.beginPath();
+      ctx.moveTo(x, gy);
+      for (let gx = x; gx < x + w; gx += 40) {
+        ctx.lineTo(gx + 40, gy + (rand() - 0.5) * 4);
+      }
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // seam
+    ctx.fillStyle = shadeColor(color, -25);
+    ctx.fillRect(x, py + plankH - 2, w, 2);
+  }
+};
+
+const drawFabricPattern = (ctx, x, y, w, h, color, sub, rand) => {
+  const light = shadeColor(color, 12);
+  const dark = shadeColor(color, -8);
+
+  if (sub === 'silk' || sub === '') {
+    // horizontal sheen
+    for (let sy = y; sy < y + h; sy += 3) {
+      ctx.fillStyle = sy % 6 === 0 ? light : color;
+      ctx.globalAlpha = 0.15;
+      ctx.fillRect(x, sy, w, 2);
+    }
+    ctx.globalAlpha = 1;
+  } else if (sub === 'velvet') {
+    // deep solid with subtle noise
+    ctx.fillStyle = mulColor(color, 0.85);
+    ctx.fillRect(x, y, w, h);
+    for (let i = 0; i < 600; i++) {
+      ctx.fillStyle = `rgba(255,255,255,${0.01 + rand() * 0.02})`;
+      ctx.fillRect(x + rand() * w, y + rand() * h, 1, 1);
+    }
+  } else if (sub === 'linen') {
+    // crosshatch
+    ctx.strokeStyle = dark;
+    ctx.lineWidth = 0.5;
+    ctx.globalAlpha = 0.15;
+    const sp = 4;
+    for (let lx = x; lx < x + w; lx += sp) {
+      ctx.beginPath(); ctx.moveTo(lx, y); ctx.lineTo(lx, y + h); ctx.stroke();
+    }
+    for (let ly = y; ly < y + h; ly += sp) {
+      ctx.beginPath(); ctx.moveTo(x, ly); ctx.lineTo(x + w, ly); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+};
+
+const drawLowerWall = (ctx, x, y, w, h, color, type, rand) => {
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w, h);
+
+  const light = shadeColor(color, 20);
+  const dark = shadeColor(color, -20);
+
+  if (type === 'beadboard') {
+    const bw = 24;
+    ctx.strokeStyle = dark;
+    ctx.lineWidth = 1;
+    for (let bx = x; bx < x + w; bx += bw) {
+      ctx.beginPath(); ctx.moveTo(bx, y); ctx.lineTo(bx, y + h); ctx.stroke();
+      ctx.strokeStyle = light; ctx.lineWidth = 0.5;
+      ctx.beginPath(); ctx.moveTo(bx + 1, y); ctx.lineTo(bx + 1, y + h); ctx.stroke();
+      ctx.strokeStyle = dark; ctx.lineWidth = 1;
+    }
+  } else if (type === 'raised panel') {
+    const panelW = 200;
+    const panelPad = 20;
+    const panelInner = 12;
+    const count = Math.ceil(w / panelW);
+    for (let i = 0; i < count; i++) {
+      const px = x + i * panelW + panelPad;
+      const py = y + panelPad;
+      const pw = panelW - panelPad * 2;
+      const ph = h - panelPad * 2;
+
+      // outer bevel
+      ctx.fillStyle = light;
+      ctx.fillRect(px, py, pw, ph);
+      ctx.fillStyle = dark;
+      ctx.fillRect(px + 3, py + 3, pw - 3, ph - 3);
+      ctx.fillStyle = color;
+      ctx.fillRect(px + 6, py + 6, pw - 9, ph - 9);
+
+      // raised center
+      ctx.fillStyle = light;
+      ctx.fillRect(px + panelInner, py + panelInner, pw - panelInner * 2, ph - panelInner * 2);
+      ctx.fillStyle = dark;
+      ctx.fillRect(px + panelInner + 2, py + panelInner + 2, pw - panelInner * 2 - 2, ph - panelInner * 2 - 2);
+      ctx.fillStyle = shadeColor(color, 5);
+      ctx.fillRect(px + panelInner + 4, py + panelInner + 4, pw - panelInner * 2 - 6, ph - panelInner * 2 - 6);
+    }
+  } else if (type === 'flat panel') {
+    const panelW = 200;
+    const pad = 18;
+    const count = Math.ceil(w / panelW);
+    for (let i = 0; i < count; i++) {
+      ctx.strokeStyle = dark;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x + i * panelW + pad, y + pad, panelW - pad * 2, h - pad * 2);
+    }
+  } else if (type === 'board & batten') {
+    const bw = 100;
+    const batW = 8;
+    for (let bx = x; bx < x + w; bx += bw) {
+      ctx.fillStyle = dark;
+      ctx.fillRect(bx + bw / 2 - batW / 2, y, batW, h);
+      ctx.fillStyle = light;
+      ctx.fillRect(bx + bw / 2 - batW / 2 + 1, y, 1, h);
+    }
+  } else if (type === 'stone') {
+    const bh = 50;
+    const bw = 120;
+    let rowIdx = 0;
+    for (let sy = y; sy < y + h; sy += bh) {
+      const offset = (rowIdx % 2) * bw / 2;
+      for (let sx = x - bw; sx < x + w + bw; sx += bw) {
+        const stoneColor = shadeColor(color, (rand() - 0.5) * 20);
+        ctx.fillStyle = stoneColor;
+        ctx.fillRect(sx + offset + 2, sy + 2, bw - 4, bh - 4);
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(sx + offset, sy, bw, bh);
+      }
+      rowIdx++;
+    }
+  } else if (type === 'marble') {
+    ctx.fillStyle = '#f0ece4';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#d0ccc4';
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.4;
+    for (let i = 0; i < 15; i++) {
+      ctx.beginPath();
+      const sx = x + rand() * w;
+      const sy = y + rand() * h;
+      ctx.moveTo(sx, sy);
+      for (let j = 0; j < 6; j++) {
+        ctx.lineTo(sx + (rand() - 0.3) * 200, sy + (rand() - 0.5) * 80);
+      }
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  } else if (type === 'wood planks') {
+    drawWoodPattern(ctx, x, y, w, h, color, rand);
+  }
+};
+
+const drawDivider = (ctx, x, y, w, h, type, wallColor) => {
+  const light = shadeColor(wallColor, 40);
+  const mid = shadeColor(wallColor, 20);
+  const dark = shadeColor(wallColor, -10);
+
+  if (type === 'chair rail') {
+    ctx.fillStyle = light;
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = mid;
+    ctx.fillRect(x, y + 3, w, h - 6);
+    ctx.fillStyle = dark;
+    ctx.fillRect(x, y + h - 3, w, 3);
+    // highlight
+    ctx.fillStyle = light;
+    ctx.fillRect(x, y + 1, w, 2);
+  } else if (type === 'molding') {
+    ctx.fillStyle = mid;
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = light;
+    ctx.fillRect(x, y, w, 4);
+    ctx.fillStyle = dark;
+    ctx.fillRect(x, y + h - 4, w, 4);
+    // center ridge
+    ctx.fillStyle = light;
+    ctx.fillRect(x, y + h / 2 - 2, w, 3);
+  } else if (type === 'picture rail') {
+    ctx.fillStyle = mid;
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = light;
+    ctx.fillRect(x, y + 2, w, 3);
+    ctx.fillStyle = dark;
+    ctx.fillRect(x, y + h - 2, w, 2);
+  }
+};
+
+const drawBaseboard = (ctx, x, y, w, h, color) => {
+  const light = shadeColor(color, 25);
+  const dark = shadeColor(color, -20);
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = light;
+  ctx.fillRect(x, y, w, 3);
+  ctx.fillStyle = dark;
+  ctx.fillRect(x, y + h - 2, w, 2);
+};
+
+// ════════════════════════════════════════════════════════════════
+// frame drawing
+// ════════════════════════════════════════════════════════════════
+
+const drawFrame = (ctx, cw, ch) => {
+  const artW = frameState.width;
+  const artH = frameState.height;
+  const profiles = frameState.profiles;
+  const finishColor = PAL.frameFinishes[frameState.finish] || '#DAA520';
+
+  // calculate rail width
+  const totalProfiles = profiles.length || 1;
+  const railWidth = Math.max(30, Math.min(120, Math.max(artW, artH) * 0.12));
+  const profileWidth = railWidth / totalProfiles;
+
+  const linerWidth = frameState.liner !== 'none' ? 12 : 0;
+  const totalW = artW + (railWidth + linerWidth) * 2;
+  const totalH = artH + (railWidth + linerWidth) * 2;
+
+  // center on canvas
+  const ox = (cw - totalW) / 2;
+  const oy = (ch - totalH) / 2;
+
+  // background
+  ctx.fillStyle = '#e8e4dc';
+  ctx.fillRect(0, 0, cw, ch);
+
+  // draw wall shadow behind frame
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.fillRect(ox + 8, oy + 10, totalW, totalH);
+
+  // draw profiles from outside in
+  let inset = 0;
+  profiles.forEach((profile, idx) => {
+    const pw = profileWidth;
+    const rx = ox + inset;
+    const ry = oy + inset;
+    const rw = totalW - inset * 2;
+    const rh = totalH - inset * 2;
+
+    drawProfileBand(ctx, rx, ry, rw, rh, pw, profile, finishColor, idx, totalProfiles);
+
+    // ornament zone mapping: A=outer quarter, B=second quarter, C=third quarter, D=inner quarter
+    const zoneIdx = Math.floor((idx / totalProfiles) * 4);
+    const zoneKey = ['A','B','C','D'][zoneIdx];
+    const ornament = frameState[`ornament${zoneKey}`];
+    if (ornament && ornament !== 'none') {
+      drawOrnaments(ctx, rx, ry, rw, rh, pw, ornament, finishColor);
+    }
+
+    inset += pw;
+  });
+
+  // corners
+  if (frameState.corners !== 'plain miter') {
+    drawCornerOrnaments(ctx, ox, oy, totalW, totalH, railWidth, frameState.corners, finishColor);
+  }
+
+  // liner
+  if (frameState.liner !== 'none') {
+    const lx = ox + railWidth;
+    const ly = oy + railWidth;
+    const lw = totalW - railWidth * 2;
+    const lh = totalH - railWidth * 2;
+    drawLiner(ctx, lx, ly, lw, lh, linerWidth, frameState.liner, finishColor);
+  }
+
+  // artwork placeholder
+  const ax = ox + railWidth + linerWidth;
+  const ay = oy + railWidth + linerWidth;
+  ctx.fillStyle = '#d4d0c8';
+  ctx.fillRect(ax, ay, artW, artH);
+  ctx.strokeStyle = '#bbb8b0';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(ax, ay, artW, artH);
+
+  // center cross
+  ctx.strokeStyle = '#c0bdb5';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(ax, ay); ctx.lineTo(ax + artW, ay + artH);
+  ctx.moveTo(ax + artW, ay); ctx.lineTo(ax, ay + artH);
+  ctx.stroke();
+
+  // aging overlay
+  if (frameState.aging !== 'none') {
+    const agingAlpha = frameState.aging === 'light' ? 0.08 : frameState.aging === 'medium' ? 0.18 : 0.3;
+    ctx.fillStyle = `rgba(30,20,10,${agingAlpha})`;
+    ctx.fillRect(ox, oy, totalW, totalH);
+
+    // extra aging in recesses
+    if (frameState.aging !== 'light') {
+      ctx.fillStyle = `rgba(20,15,5,${agingAlpha * 0.6})`;
+      const darkBand = 4;
+      ctx.fillRect(ox + railWidth - darkBand, oy + railWidth - darkBand, artW + linerWidth * 2 + darkBand * 2, darkBand);
+      ctx.fillRect(ox + railWidth - darkBand, oy + railWidth, darkBand, artH + linerWidth * 2);
+      ctx.fillRect(ox + totalW - railWidth, oy + railWidth, darkBand, artH + linerWidth * 2);
+      ctx.fillRect(ox + railWidth - darkBand, oy + totalH - railWidth, artW + linerWidth * 2 + darkBand * 2, darkBand);
+    }
+  }
+};
+
+const drawProfileBand = (ctx, rx, ry, rw, rh, pw, profile, color, idx, total) => {
+  const light = shadeColor(color, 35);
+  const mid = color;
+  const dark = shadeColor(color, -35);
+
+  // top rail
+  drawTrapezoid(ctx, rx, ry, rx + rw, ry, rx + rw - pw, ry + pw, rx + pw, ry + pw, profile, light, mid, dark, 'top');
+  // bottom rail
+  drawTrapezoid(ctx, rx + pw, ry + rh - pw, rx + rw - pw, ry + rh - pw, rx + rw, ry + rh, rx, ry + rh, profile, light, mid, dark, 'bottom');
+  // left rail
+  drawTrapezoid(ctx, rx, ry, rx + pw, ry + pw, rx + pw, ry + rh - pw, rx, ry + rh, profile, light, mid, dark, 'left');
+  // right rail
+  drawTrapezoid(ctx, rx + rw - pw, ry + pw, rx + rw, ry, rx + rw, ry + rh, rx + rw - pw, ry + rh - pw, profile, light, mid, dark, 'right');
+};
+
+const drawTrapezoid = (ctx, x1, y1, x2, y2, x3, y3, x4, y4, profile, light, mid, dark, side) => {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.lineTo(x3, y3);
+  ctx.lineTo(x4, y4);
+  ctx.closePath();
+
+  if (profile === 'flat') {
+    ctx.fillStyle = mid;
+    ctx.fill();
+  } else if (profile === 'ogee') {
+    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
+    grad.addColorStop(0, light);
+    grad.addColorStop(0.4, mid);
+    grad.addColorStop(1, dark);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  } else if (profile === 'cushion') {
+    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
+    grad.addColorStop(0, mid);
+    grad.addColorStop(0.5, light);
+    grad.addColorStop(1, mid);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  } else if (profile === 'scoop') {
+    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
+    grad.addColorStop(0, mid);
+    grad.addColorStop(0.5, dark);
+    grad.addColorStop(1, mid);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  } else if (profile === 'reverse scoop') {
+    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
+    grad.addColorStop(0, dark);
+    grad.addColorStop(0.5, light);
+    grad.addColorStop(1, dark);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  } else if (profile === 'bead') {
+    ctx.fillStyle = mid;
+    ctx.fill();
+    // highlight dots
+    const cx = (x1 + x2 + x3 + x4) / 4;
+    const cy = (y1 + y2 + y3 + y4) / 4;
+    const len = side === 'top' || side === 'bottom' ? Math.abs(x2 - x1) : Math.abs(y4 - y1);
+    const count = Math.floor(len / 12);
+    ctx.fillStyle = light;
+    for (let i = 0; i < count; i++) {
+      const t = i / count;
+      let px, py;
+      if (side === 'top') { px = x1 + (x2 - x1) * t + (x4 - x1 + (x3 - x2 - x4 + x1) * t) * 0.5; py = y1 + (y4 - y1) * 0.5; }
+      else if (side === 'bottom') { px = x4 + (x3 - x4) * t + (x1 - x4 + (x2 - x3 - x1 + x4) * t) * 0.5; py = y4 + (y1 - y4) * 0.5; }
+      else if (side === 'left') { px = x1 + (x4 - x1) * 0.5; py = y1 + (y4 - y1) * t; }
+      else { px = x2 + (x3 - x2) * 0.5; py = y2 + (y3 - y2) * t; }
+      ctx.beginPath();
+      ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (profile === 'bolection') {
+    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
+    grad.addColorStop(0, light);
+    grad.addColorStop(0.3, mid);
+    grad.addColorStop(0.7, dark);
+    grad.addColorStop(1, shadeColor(dark, -15));
+    ctx.fillStyle = grad;
+    ctx.fill();
+  } else if (profile === 'fillet') {
+    ctx.fillStyle = mid;
+    ctx.fill();
+    ctx.strokeStyle = light;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  } else if (profile === 'astragal') {
+    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
+    grad.addColorStop(0, light);
+    grad.addColorStop(0.5, mid);
+    grad.addColorStop(1, dark);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    // center bead highlight
+    ctx.strokeStyle = shadeColor(light, 15);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    if (side === 'top' || side === 'bottom') {
+      const my = (y1 + y4) / 2;
+      ctx.moveTo(x1, my); ctx.lineTo(x2, my);
+    } else {
+      const mx = (x1 + x2) / 2;
+      ctx.moveTo(mx, y1); ctx.lineTo(mx, y4);
+    }
+    ctx.stroke();
+  } else if (profile === 'cavetto') {
+    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
+    grad.addColorStop(0, mid);
+    grad.addColorStop(1, dark);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  } else if (profile === 'scotia') {
+    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
+    grad.addColorStop(0, dark);
+    grad.addColorStop(0.7, mid);
+    grad.addColorStop(1, light);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  } else if (profile === 'chamfer') {
+    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
+    grad.addColorStop(0, light);
+    grad.addColorStop(1, mid);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  } else if (profile === 'bevel') {
+    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
+    grad.addColorStop(0, light);
+    grad.addColorStop(1, dark);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  } else if (profile === 'torus') {
+    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
+    grad.addColorStop(0, mid);
+    grad.addColorStop(0.3, light);
+    grad.addColorStop(0.7, light);
+    grad.addColorStop(1, mid);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  } else if (profile === 'quirk') {
+    ctx.fillStyle = mid;
+    ctx.fill();
+    ctx.strokeStyle = dark;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    if (side === 'top' || side === 'bottom') {
+      const my = (y1 + y4) / 2;
+      ctx.moveTo(x1, my); ctx.lineTo(x2, my);
+    } else {
+      const mx = (x1 + x2) / 2;
+      ctx.moveTo(mx, y1); ctx.lineTo(mx, y4);
+    }
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = mid;
+    ctx.fill();
+  }
+};
+
+const createSideGradient = (ctx, x1, y1, x3, y3, side) => {
+  if (side === 'top') return ctx.createLinearGradient(0, y1, 0, y3);
+  if (side === 'bottom') return ctx.createLinearGradient(0, y3, 0, y1);
+  if (side === 'left') return ctx.createLinearGradient(x1, 0, x3, 0);
+  return ctx.createLinearGradient(x3, 0, x1, 0);
+};
+
+const drawOrnaments = (ctx, rx, ry, rw, rh, pw, ornament, color) => {
+  const light = shadeColor(color, 30);
+  const dark = shadeColor(color, -20);
+  const midY = ry + pw / 2;
+  const midX = rx + pw / 2;
+  const spacing = ornament === 'greek key' ? 24 : ornament === 'guilloche' ? 20 : 16;
+
+  ctx.save();
+  ctx.fillStyle = light;
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.6;
+
+  // top rail ornaments
+  const topY = ry + pw * 0.4;
+  for (let ox = rx + pw + spacing; ox < rx + rw - pw - spacing; ox += spacing) {
+    drawSingleOrnament(ctx, ox, topY, ornament, light, dark, pw * 0.3);
+  }
+
+  // bottom rail
+  const botY = ry + rh - pw * 0.6;
+  for (let ox = rx + pw + spacing; ox < rx + rw - pw - spacing; ox += spacing) {
+    drawSingleOrnament(ctx, ox, botY, ornament, light, dark, pw * 0.3);
+  }
+
+  // left rail
+  const leftX = rx + pw * 0.4;
+  for (let oy = ry + pw + spacing; oy < ry + rh - pw - spacing; oy += spacing) {
+    drawSingleOrnament(ctx, leftX, oy, ornament, light, dark, pw * 0.3);
+  }
+
+  // right rail
+  const rightX = rx + rw - pw * 0.6;
+  for (let oy = ry + pw + spacing; oy < ry + rh - pw - spacing; oy += spacing) {
+    drawSingleOrnament(ctx, rightX, oy, ornament, light, dark, pw * 0.3);
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+};
+
+const drawSingleOrnament = (ctx, x, y, type, light, dark, scale) => {
+  const s = Math.max(3, scale);
+
+  if (type === 'bead') {
+    ctx.beginPath();
+    ctx.arc(x, y, s * 0.4, 0, Math.PI * 2);
+    ctx.fillStyle = light;
+    ctx.fill();
+  } else if (type === 'bead & reel') {
+    ctx.beginPath();
+    ctx.arc(x, y, s * 0.35, 0, Math.PI * 2);
+    ctx.fillStyle = light;
+    ctx.fill();
+    ctx.fillStyle = dark;
+    ctx.fillRect(x + s * 0.5, y - s * 0.15, s * 0.3, s * 0.3);
+  } else if (type === 'egg-and-dart') {
+    // egg
+    ctx.beginPath();
+    ctx.ellipse(x, y, s * 0.35, s * 0.5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = light;
+    ctx.fill();
+    // dart
+    ctx.beginPath();
+    ctx.moveTo(x + s * 0.6, y - s * 0.4);
+    ctx.lineTo(x + s * 0.7, y);
+    ctx.lineTo(x + s * 0.6, y + s * 0.4);
+    ctx.fillStyle = dark;
+    ctx.fill();
+  } else if (type === 'acanthus') {
+    ctx.beginPath();
+    ctx.moveTo(x, y - s * 0.5);
+    ctx.bezierCurveTo(x + s * 0.4, y - s * 0.3, x + s * 0.5, y, x + s * 0.3, y + s * 0.4);
+    ctx.bezierCurveTo(x + s * 0.1, y + s * 0.5, x - s * 0.1, y + s * 0.5, x - s * 0.3, y + s * 0.4);
+    ctx.bezierCurveTo(x - s * 0.5, y, x - s * 0.4, y - s * 0.3, x, y - s * 0.5);
+    ctx.fillStyle = light;
+    ctx.fill();
+  } else if (type === 'scrolls') {
+    ctx.beginPath();
+    ctx.arc(x, y - s * 0.2, s * 0.35, 0, Math.PI, false);
+    ctx.strokeStyle = light;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y + s * 0.2, s * 0.25, Math.PI, 0, false);
+    ctx.stroke();
+  } else if (type === 'shell') {
+    ctx.beginPath();
+    ctx.arc(x, y + s * 0.2, s * 0.5, Math.PI, 0, false);
+    ctx.fillStyle = light;
+    ctx.fill();
+    // ribs
+    for (let i = 0; i < 5; i++) {
+      const a = Math.PI + (i / 4) * Math.PI;
+      ctx.beginPath();
+      ctx.moveTo(x, y + s * 0.2);
+      ctx.lineTo(x + Math.cos(a) * s * 0.5, y + s * 0.2 + Math.sin(a) * s * 0.5);
+      ctx.strokeStyle = dark;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+  } else if (type === 'rope') {
+    ctx.beginPath();
+    ctx.moveTo(x - s * 0.4, y - s * 0.15);
+    ctx.bezierCurveTo(x - s * 0.2, y - s * 0.4, x + s * 0.2, y + s * 0.4, x + s * 0.4, y + s * 0.15);
+    ctx.strokeStyle = light;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  } else if (type === 'laurel') {
+    for (let side = -1; side <= 1; side += 2) {
+      ctx.beginPath();
+      ctx.ellipse(x + side * s * 0.25, y, s * 0.2, s * 0.4, side * 0.3, 0, Math.PI * 2);
+      ctx.fillStyle = light;
+      ctx.fill();
+    }
+  } else if (type === 'greek key') {
+    ctx.strokeStyle = light;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x - s * 0.4, y - s * 0.4);
+    ctx.lineTo(x + s * 0.4, y - s * 0.4);
+    ctx.lineTo(x + s * 0.4, y + s * 0.1);
+    ctx.lineTo(x - s * 0.1, y + s * 0.1);
+    ctx.lineTo(x - s * 0.1, y + s * 0.4);
+    ctx.lineTo(x - s * 0.4, y + s * 0.4);
+    ctx.stroke();
+  } else if (type === 'guilloche') {
+    ctx.strokeStyle = light;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(x, y, s * 0.35, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y, s * 0.2, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (type === 'floral') {
+    for (let p = 0; p < 5; p++) {
+      const a = (p / 5) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.ellipse(x + Math.cos(a) * s * 0.25, y + Math.sin(a) * s * 0.25, s * 0.18, s * 0.1, a, 0, Math.PI * 2);
+      ctx.fillStyle = light;
+      ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.arc(x, y, s * 0.12, 0, Math.PI * 2);
+    ctx.fillStyle = dark;
+    ctx.fill();
+  } else if (type === 'vine') {
+    ctx.strokeStyle = light;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x - s * 0.5, y);
+    ctx.bezierCurveTo(x - s * 0.2, y - s * 0.3, x + s * 0.2, y + s * 0.3, x + s * 0.5, y);
+    ctx.stroke();
+    // small leaf
+    ctx.beginPath();
+    ctx.ellipse(x, y - s * 0.15, s * 0.12, s * 0.08, -0.5, 0, Math.PI * 2);
+    ctx.fillStyle = light;
+    ctx.fill();
+  }
+};
+
+const drawCornerOrnaments = (ctx, ox, oy, tw, th, railW, cornerType, color) => {
+  const light = shadeColor(color, 35);
+  const dark = shadeColor(color, -20);
+  const s = railW * 0.4;
+
+  const corners = [
+    [ox + railW * 0.5, oy + railW * 0.5],
+    [ox + tw - railW * 0.5, oy + railW * 0.5],
+    [ox + tw - railW * 0.5, oy + th - railW * 0.5],
+    [ox + railW * 0.5, oy + th - railW * 0.5]
+  ];
+
+  ctx.save();
+  ctx.globalAlpha = 0.7;
+
+  corners.forEach(([cx, cy]) => {
+    if (cornerType === 'floral burst') {
+      for (let p = 0; p < 8; p++) {
+        const a = (p / 8) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.ellipse(cx + Math.cos(a) * s * 0.5, cy + Math.sin(a) * s * 0.5, s * 0.35, s * 0.15, a, 0, Math.PI * 2);
+        ctx.fillStyle = light;
+        ctx.fill();
+      }
+      ctx.beginPath();
+      ctx.arc(cx, cy, s * 0.25, 0, Math.PI * 2);
+      ctx.fillStyle = dark;
+      ctx.fill();
+    } else if (cornerType === 'shell') {
+      ctx.beginPath();
+      ctx.arc(cx, cy, s * 0.7, 0, Math.PI * 2);
+      ctx.fillStyle = light;
+      ctx.fill();
+      for (let r = 0; r < 8; r++) {
+        const a = (r / 8) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(a) * s * 0.7, cy + Math.sin(a) * s * 0.7);
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    } else if (cornerType === 'cartouche') {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - s * 0.6);
+      ctx.bezierCurveTo(cx + s * 0.5, cy - s * 0.5, cx + s * 0.6, cy, cx + s * 0.5, cy + s * 0.4);
+      ctx.bezierCurveTo(cx + s * 0.3, cy + s * 0.6, cx - s * 0.3, cy + s * 0.6, cx - s * 0.5, cy + s * 0.4);
+      ctx.bezierCurveTo(cx - s * 0.6, cy, cx - s * 0.5, cy - s * 0.5, cx, cy - s * 0.6);
+      ctx.fillStyle = light;
+      ctx.fill();
+    } else if (cornerType === 'acanthus cluster') {
+      for (let l = 0; l < 6; l++) {
+        const a = (l / 6) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.bezierCurveTo(
+          cx + Math.cos(a - 0.3) * s * 0.4, cy + Math.sin(a - 0.3) * s * 0.4,
+          cx + Math.cos(a + 0.3) * s * 0.6, cy + Math.sin(a + 0.3) * s * 0.6,
+          cx + Math.cos(a) * s * 0.7, cy + Math.sin(a) * s * 0.7
+        );
+        ctx.strokeStyle = light;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(cx, cy, s * 0.15, 0, Math.PI * 2);
+      ctx.fillStyle = light;
+      ctx.fill();
+    } else if (cornerType === 'scroll volute') {
+      ctx.strokeStyle = light;
+      ctx.lineWidth = 2;
+      for (let t = 0; t < Math.PI * 3; t += 0.1) {
+        const r = s * 0.1 + t * s * 0.06;
+        const px = cx + Math.cos(t) * r;
+        const py = cy + Math.sin(t) * r;
+        if (t === 0) { ctx.beginPath(); ctx.moveTo(px, py); }
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+  });
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+};
+
+const drawLiner = (ctx, lx, ly, lw, lh, linerW, linerType, frameColor) => {
+  const colors = {
+    'linen': '#f5f0e6',
+    'velvet': '#4a0028',
+    'gold liner': '#daa520'
+  };
+  const c = colors[linerType] || '#f5f0e6';
+  const light = shadeColor(c, 15);
+  const dark = shadeColor(c, -15);
+
+  // outer edge
+  ctx.fillStyle = dark;
+  ctx.fillRect(lx, ly, lw, linerW); // top
+  ctx.fillRect(lx, ly + lh - linerW, lw, linerW); // bottom
+  ctx.fillRect(lx, ly, linerW, lh); // left
+  ctx.fillRect(lx + lw - linerW, ly, linerW, lh); // right
+
+  // inner lighter
+  const i = 3;
+  ctx.fillStyle = c;
+  ctx.fillRect(lx + i, ly + i, lw - i * 2, linerW - i * 2);
+  ctx.fillRect(lx + i, ly + lh - linerW + i, lw - i * 2, linerW - i * 2);
+  ctx.fillRect(lx + i, ly + i, linerW - i * 2, lh - i * 2);
+  ctx.fillRect(lx + lw - linerW + i, ly + i, linerW - i * 2, lh - i * 2);
+
+  // texture for linen
+  if (linerType === 'linen') {
+    ctx.globalAlpha = 0.1;
+    ctx.strokeStyle = dark;
+    ctx.lineWidth = 0.5;
+    for (let tx = lx; tx < lx + lw; tx += 3) {
+      ctx.beginPath(); ctx.moveTo(tx, ly); ctx.lineTo(tx, ly + linerW); ctx.stroke();
+    }
+    for (let ty = ly + lh - linerW; ty < ly + lh; ty += 3) {
+      ctx.beginPath(); ctx.moveTo(lx, ty); ctx.lineTo(lx + lw, ty); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+};
+
+// ════════════════════════════════════════════════════════════════
+// rendering
+// ════════════════════════════════════════════════════════════════
+
+const canvas = $('#canvas');
+const ctx = canvas.getContext('2d');
+let renderQueued = false;
+
+const render = () => {
+  renderQueued = false;
+
+  if (currentMode === 'background') {
+    canvas.width = bgState.width;
+    canvas.height = bgState.height;
+    drawWall(ctx, bgState.width, bgState.height);
+  } else {
+    const artW = frameState.width;
+    const artH = frameState.height;
+    const profiles = frameState.profiles;
+    const totalProfiles = profiles.length || 1;
+    const railWidth = Math.max(30, Math.min(120, Math.max(artW, artH) * 0.12));
+    const linerWidth = frameState.liner !== 'none' ? 12 : 0;
+    const totalW = artW + (railWidth + linerWidth) * 2;
+    const totalH = artH + (railWidth + linerWidth) * 2;
+    const pad = 40;
+    canvas.width = totalW + pad * 2;
+    canvas.height = totalH + pad * 2;
+    drawFrame(ctx, canvas.width, canvas.height);
+  }
+};
+
+const scheduleRender = () => {
+  if (!renderQueued) {
+    renderQueued = true;
+    requestAnimationFrame(render);
+  }
+};
+
+// ════════════════════════════════════════════════════════════════
+// top-level event wiring
+// ════════════════════════════════════════════════════════════════
+
+// mode toggle
+$$('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    $$('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentMode = btn.dataset.mode;
+    rebuildControls();
+    scheduleRender();
+  });
+});
+
+// generate button
+$('#btn-generate').addEventListener('click', () => {
+  render();
+});
+
+// download button
+$('#btn-download').addEventListener('click', () => {
+  const link = document.createElement('a');
+  link.download = `framewall-${currentMode}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+});
+
+// init
+rebuildControls();
+scheduleRender();
+</script>
+</body>
+</html>
