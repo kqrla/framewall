@@ -1,0 +1,14 @@
+{
+  "name": "museum wall & frame generator",
+  "id": "f2611f4c-2602-41e2-8457-bd648a042003",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "relaunchButtons": [
+    {
+      "command": "generate",
+      "name": "Generate"
+    }
+  ]
+}
