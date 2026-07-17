@@ -34,7 +34,7 @@ function c(hex: string): SolidPaint {
   return { type: 'SOLID', color: hexToRgb(hex) };
 }
 
-function sp(hex: string): SolidPaint {
+function _sp(hex: string): SolidPaint {
   return { type: 'SOLID', color: hexToRgb(hex) };
 }
 
@@ -410,21 +410,34 @@ const PRESETS: Record<string, Omit<FrameConfig, 'artworkWidth' | 'artworkHeight'
   },
 };
 
+// ─── finish color lookup ─────────────────────────────────────────────────────
+
 const FINISH_COLORS: Record<FinishType, string> = {
-  'gold leaf': PAL.gold, 'antique gold': PAL.antiqueGold,
-  'champagne gold': PAL.champagneGold, 'silver leaf': PAL.silverLeaf,
-  'bronze': PAL.bronze, 'black lacquer': PAL.blackLacquer,
-  'white': PAL.galleryWhite, 'oak': PAL.oak,
-  'walnut': PAL.walnut, 'mahogany': PAL.mahogany,
+  'gold leaf': PAL.gold,
+  'antique gold': PAL.antiqueGold,
+  'champagne gold': PAL.champagneGold,
+  'silver leaf': PAL.silverLeaf,
+  'bronze': PAL.bronze,
+  'black lacquer': PAL.blackLacquer,
+  'white': PAL.galleryWhite,
+  'oak': PAL.oak,
+  'walnut': PAL.walnut,
+  'mahogany': PAL.mahogany,
 };
+
+// ─── profile widths ──────────────────────────────────────────────────────────
 
 const PROFILE_WIDTHS: Record<ProfilePrimitive, number> = {
   flat: 14, ogee: 16, cushion: 18, scoop: 14, 'reverse scoop': 14,
   bead: 6, bolection: 22, fillet: 4, astragal: 10, cavetto: 12, scotia: 14, cove: 14,
 };
 
+// ─── profile shading ─────────────────────────────────────────────────────────
+
 interface ProfileShading {
-  outerShift: number; innerShift: number; midShift: number;
+  outerShift: number; // positive = lighter, negative = darker
+  innerShift: number;
+  midShift: number;
 }
 
 const PROFILE_SHADING: Record<ProfilePrimitive, ProfileShading> = {
@@ -446,6 +459,8 @@ function applyShading(base: string, shift: number): string {
   return shift > 0 ? lighter(base, shift) : shift < 0 ? darker(base, -shift) : base;
 }
 
+// ─── draw profile bands ─────────────────────────────────────────────────────
+
 function drawProfileBands(
   root: FrameNode, totalW: number, totalH: number,
   stack: ProfilePrimitive[], finishColor: string, reliefDepth: number,
@@ -458,11 +473,14 @@ function drawProfileBands(
     const shading = PROFILE_SHADING[prim];
     bandOffsets.push(offset);
 
+    // each band = 4 side rectangles (top, bottom, left, right)
     const outerCol = applyShading(finishColor, shading.outerShift);
     const innerCol = applyShading(finishColor, shading.innerShift);
     const midCol = applyShading(finishColor, shading.midShift);
 
     const innerOffset = offset + w;
+
+    // draw 3 sub-strips per band to simulate shading: outer third, mid third, inner third
     const stripW = Math.max(1, Math.floor(w / 3));
     const strips = [
       { off: 0, col: outerCol },
@@ -473,12 +491,17 @@ function drawProfileBands(
     for (const strip of strips) {
       const so = offset + strip.off;
       const sw = so === offset + stripW * 2 ? w - stripW * 2 : stripW;
+      // top rail
       addRect(root, so, so, totalW - 2 * so, sw, strip.col, 1, `${prim}-top`);
+      // bottom rail
       addRect(root, so, totalH - so - sw, totalW - 2 * so, sw, strip.col, 1, `${prim}-bot`);
+      // left rail
       addRect(root, so, so + sw, sw, totalH - 2 * (so + sw), strip.col, 1, `${prim}-left`);
+      // right rail
       addRect(root, totalW - so - sw, so + sw, sw, totalH - 2 * (so + sw), strip.col, 1, `${prim}-right`);
     }
 
+    // relief: thin shadow line on inner edge
     if (reliefDepth > 0) {
       const shadowCol = darker(finishColor, 0.15 * Math.min(reliefDepth, 5) / 5);
       addRect(root, innerOffset - 1, innerOffset - 1, totalW - 2 * (innerOffset - 1), 1, shadowCol, 0.3, 'relief');
@@ -492,6 +515,8 @@ function drawProfileBands(
 
   return { bandOffsets, railWidth: offset };
 }
+
+// ─── ornament drawing ────────────────────────────────────────────────────────
 
 type OrnamentDrawFn = (
   parent: FrameNode, x: number, y: number, size: number, col: string, rotation?: number,
@@ -572,23 +597,29 @@ function drawOrnamentRail(
   const spacing = Math.max(12, bandWidth * 1.8);
   const mid = bandOffset + bandWidth / 2;
 
+  // top rail ornaments
   for (let x = railWidth + spacing; x < totalW - railWidth - spacing; x += spacing) {
     if (Math.random() > coverage + 0.3) continue;
     drawFn(parent, x, mid, bandWidth * 0.9, col);
   }
+  // bottom rail
   for (let x = railWidth + spacing; x < totalW - railWidth - spacing; x += spacing) {
     if (Math.random() > coverage + 0.3) continue;
     drawFn(parent, x, totalH - mid, bandWidth * 0.9, col);
   }
+  // left rail
   for (let y = railWidth + spacing; y < totalH - railWidth - spacing; y += spacing) {
     if (Math.random() > coverage + 0.3) continue;
     drawFn(parent, mid, y, bandWidth * 0.9, col);
   }
+  // right rail
   for (let y = railWidth + spacing; y < totalH - railWidth - spacing; y += spacing) {
     if (Math.random() > coverage + 0.3) continue;
     drawFn(parent, totalW - mid, y, bandWidth * 0.9, col);
   }
 }
+
+// ─── corner treatments ───────────────────────────────────────────────────────
 
 function drawCorner(
   parent: FrameNode, cx: number, cy: number,
@@ -627,6 +658,8 @@ function drawCorner(
   }
 }
 
+// ─── liner ───────────────────────────────────────────────────────────────────
+
 function drawLiner(
   parent: FrameNode, railW: number, totalW: number, totalH: number,
   linerType: LinerType,
@@ -639,11 +672,18 @@ function drawLiner(
   const col = colorMap[linerType] || PAL.cream;
   const ix = railW, iy = railW;
   const iw = totalW - 2 * railW, ih = totalH - 2 * railW;
+
+  // top
   addRect(parent, ix, iy, iw, linerW, col, 0.9, 'liner-top');
+  // bottom
   addRect(parent, ix, iy + ih - linerW, iw, linerW, col, 0.9, 'liner-bot');
+  // left
   addRect(parent, ix, iy + linerW, linerW, ih - 2 * linerW, col, 0.9, 'liner-left');
+  // right
   addRect(parent, ix + iw - linerW, iy + linerW, linerW, ih - 2 * linerW, col, 0.9, 'liner-right');
 }
+
+// ─── aging ───────────────────────────────────────────────────────────────────
 
 function applyAging(
   parent: FrameNode, totalW: number, totalH: number,
@@ -652,20 +692,29 @@ function applyAging(
   if (agingType === 'none') return;
   const opacityMap: Record<string, number> = { light: 0.06, medium: 0.12, heavy: 0.22 };
   const op = opacityMap[agingType] || 0;
+
+  // overall darkening overlay
   addRect(parent, 0, 0, totalW, totalH, '#1a1000', op, 'patina');
+
+  // corner darkening
   const cs = railW * 0.7;
   const cornerOp = op * 1.5;
   addRect(parent, 0, 0, cs, cs, '#0d0800', cornerOp, 'age-corner');
   addRect(parent, totalW - cs, 0, cs, cs, '#0d0800', cornerOp, 'age-corner');
   addRect(parent, 0, totalH - cs, cs, cs, '#0d0800', cornerOp, 'age-corner');
   addRect(parent, totalW - cs, totalH - cs, cs, cs, '#0d0800', cornerOp, 'age-corner');
+
   if (agingType === 'heavy') {
+    // edge wear — lighter spots
     addRect(parent, railW * 0.3, railW * 0.3, totalW * 0.15, 2, '#e8d8b0', 0.08, 'wear');
     addRect(parent, totalW - railW * 0.5, totalH * 0.4, 2, totalH * 0.15, '#e8d8b0', 0.08, 'wear');
   }
 }
 
+// ─── main frame generator ────────────────────────────────────────────────────
+
 function generateFrame(cfg: FrameConfig): void {
+  // merge preset if specified
   let finalCfg = { ...cfg };
   if (cfg.preset && PRESETS[cfg.preset]) {
     finalCfg = { ...PRESETS[cfg.preset], ...cfg, profileStack: cfg.profileStack || PRESETS[cfg.preset].profileStack };
@@ -674,6 +723,7 @@ function generateFrame(cfg: FrameConfig): void {
   const artW = finalCfg.artworkWidth || 400;
   const artH = finalCfg.artworkHeight || 500;
 
+  // calculate rail width
   let railW = 0;
   for (const p of finalCfg.profileStack) {
     railW += PROFILE_WIDTHS[p] || 12;
@@ -681,6 +731,7 @@ function generateFrame(cfg: FrameConfig): void {
 
   const totalW = artW + 2 * railW;
   const totalH = artH + 2 * railW;
+
   const finishColor = FINISH_COLORS[finalCfg.finish] || PAL.antiqueGold;
 
   const root = figma.createFrame();
@@ -689,16 +740,19 @@ function generateFrame(cfg: FrameConfig): void {
   root.fills = [];
   root.clipsContent = true;
 
+  // draw profile bands
   const { bandOffsets } = drawProfileBands(
     root, totalW, totalH, finalCfg.profileStack, finishColor, finalCfg.reliefDepth,
   );
 
+  // ornament zones: map zones to profile bands
   const zones: (keyof OrnamentZones)[] = ['A', 'B', 'C', 'D'];
   const bandCount = finalCfg.profileStack.length;
   for (let zi = 0; zi < zones.length; zi++) {
     const zone = zones[zi];
     const ornType = finalCfg.ornamentZones[zone];
     if (ornType === 'none') continue;
+    // map zone index to band index proportionally
     const bi = Math.min(Math.floor((zi / zones.length) * bandCount), bandCount - 1);
     const bandOff = bandOffsets[bi] || 0;
     const bandW = PROFILE_WIDTHS[finalCfg.profileStack[bi]] || 12;
@@ -708,6 +762,7 @@ function generateFrame(cfg: FrameConfig): void {
     );
   }
 
+  // corner treatments
   const cornerSize = railW * 0.6;
   const cMid = railW / 2;
   drawCorner(root, cMid, cMid, finalCfg.cornerType, finalCfg.cornerAmplification, cornerSize, finishColor);
@@ -715,8 +770,10 @@ function generateFrame(cfg: FrameConfig): void {
   drawCorner(root, cMid, totalH - cMid, finalCfg.cornerType, finalCfg.cornerAmplification, cornerSize, finishColor);
   drawCorner(root, totalW - cMid, totalH - cMid, finalCfg.cornerType, finalCfg.cornerAmplification, cornerSize, finishColor);
 
+  // liner
   drawLiner(root, railW, totalW, totalH, finalCfg.liner);
 
+  // artwork placeholder
   const linerW = finalCfg.liner !== 'none' ? 10 : 0;
   const placeholderX = railW + linerW;
   const placeholderY = railW + linerW;
@@ -724,6 +781,7 @@ function generateFrame(cfg: FrameConfig): void {
   const placeholderH = artH - 2 * linerW;
   addRect(root, placeholderX, placeholderY, placeholderW, placeholderH, PAL.galleryWhite, 0.85, 'artwork-placeholder');
 
+  // aging
   applyAging(root, totalW, totalH, finalCfg.aging, railW);
 
   figma.currentPage.appendChild(root);
@@ -734,7 +792,8 @@ function generateFrame(cfg: FrameConfig): void {
 
 figma.showUI(__html__, { width: 340, height: 600 });
 
-figma.ui.onmessage = (msg: { type: string; config?: any; height?: number }) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+figma.ui.onmessage = (msg: Record<string, any>) => {
   if (msg.type === 'resize' && msg.height) {
     figma.ui.resize(340, Math.min(800, Math.max(400, msg.height)));
     return;
@@ -784,8 +843,8 @@ figma.ui.onmessage = (msg: { type: string; config?: any; height?: number }) => {
     } else if (msg.type === 'cancel') {
       figma.closePlugin();
     }
-  } catch (err: any) {
-    figma.notify(`error: ${err.message || err}`, { error: true });
+  } catch (err: unknown) {
+    figma.notify(`error: ${err instanceof Error ? err.message : err}`, { error: true });
     figma.closePlugin();
   }
 };
