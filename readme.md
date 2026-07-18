@@ -1,32 +1,72 @@
 # framewall
 
-museum wall & frame generator — figma plugin + standalone web app
+museum wall & frame generator — a tool for creating historically accurate museum wall backgrounds and ornate picture frames.
 
-## structure
+available as a figma plugin and a standalone web app.
 
-- `plugin/` — figma plugin source (code.ts, ui.html, manifest.json)
-- `web/` — standalone web app (single html file, no dependencies)
+## what it does
 
-## plugin
+framewall generates two types of museum-quality design assets:
 
-generates museum-style wall backgrounds and ornate picture frames directly on the figma canvas.
-
-### backgrounds
-- wall coverings: painted, wallpaper (damask, william morris, stripes, flock, toile, brocade, embossed leather), wood, fabric
-- dividers: chair rail, molding, picture rail
-- lower wall: beadboard, raised panel, flat panel, board & batten, stone, marble, wood planks
+**museum walls** — composable wall backgrounds (1778x1000) built from layered architectural elements:
+- wall coverings (painted, wallpaper, wood paneling, fabric)
+- dividers (chair rail, molding, picture rail)
+- lower wall / wainscoting (beadboard, raised panel, flat panel, board & batten, stone, marble, wood planks)
 - baseboard
-- picrew-style preview with hover zones, chevron cycling, color swatches, right-click context menus
 
-### frames (museum frame grammar)
-- anatomy-first approach: profile stack, ornament zones, corner treatments, finish, liner, aging
-- 15 profile primitives: flat, ogee, cushion, scoop, bead, bolection, fillet, astragal, cavetto, scotia, etc.
-- 13 ornament types: bead, egg-and-dart, acanthus, scrolls, shell, rope, laurel, greek key, guilloche, floral, vine, etc.
-- 6 corner treatments: plain miter, floral burst, shell, cartouche, acanthus cluster, scroll volute
-- 10 finishes: gold leaf, antique gold, champagne gold, silver leaf, bronze, black lacquer, white, oak, walnut, mahogany
-- 7 historical presets: renaissance, baroque, rococo, neoclassical, victorian, arts & crafts, modern gallery
-- presets auto-fill all anatomy parameters; every parameter remains customizable
+**ornate picture frames** — anatomy-first frame generation based on a 5-part "museum frame grammar":
+- profile stacks (ogee, cushion, bolection, fillet, bead, and more)
+- ornament zones (acanthus, egg-and-dart, shell, scrolls, greek key, etc.)
+- corner treatments (floral burst, cartouche, acanthus cluster, scroll volute)
+- finishes (gold leaf, antique gold, champagne gold, silver leaf, bronze, wood, lacquer)
+- liners & aging effects
 
-## web app
+7 historical presets auto-fill anatomy parameters: renaissance, baroque, rococo, neoclassical, victorian, arts & crafts, modern gallery.
 
-open `web/index.html` in a browser. dark sidebar with controls, live canvas preview, png download.
+## project structure
+
+```
+framewall/
+├── plugin/          figma generative plugin
+│   ├── manifest.json
+│   ├── code.ts      plugin logic (figma api)
+│   └── ui.html      plugin ui (step wizard)
+│
+├── web/             standalone web app
+│   └── index.html   full app, no dependencies
+│
+├── readme.md
+├── features.md
+├── underthehood.md
+├── usecases.md
+└── roadmap.md
+```
+
+## getting started
+
+### web app
+open `web/index.html` in any browser. no build step, no dependencies.
+
+### figma plugin
+the plugin is published to figma. search for "museum wall & frame generator" in the figma plugin directory, or install it directly from the community page.
+
+## export formats
+
+the web app supports exporting in 4 formats:
+- **png** — raster, transparent-ready
+- **jpeg** — compressed raster, smaller file size
+- **svg** — vector, scalable to any size
+- **html/css** — standalone page with css-drawn elements
+
+## philosophy
+
+> "i don't want to teach the generator styles first. teach it the anatomy of a frame, then define styles as combinations of anatomical choices."
+
+historical frame styles are presets, not primitives. the generator understands frame *anatomy* — profiles, ornaments, corners, finishes, liners, aging — and historical styles emerge from specific combinations of those anatomical parameters.
+
+## docs
+
+- [features.md](features.md) — full feature list
+- [underthehood.md](underthehood.md) — technical architecture, rendering pipeline, mermaid diagrams
+- [usecases.md](usecases.md) — who this is for and how they use it
+- [roadmap.md](roadmap.md) — what's next
