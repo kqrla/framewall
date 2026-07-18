@@ -321,7 +321,7 @@ input[type="number"]::-webkit-inner-spin-button { opacity: 1; }
   gap: 8px;
 }
 
-.btn-generate, .btn-download {
+.btn-generate, .btn-export {
   padding: 12px;
   border: none;
   border-radius: 8px;
@@ -340,12 +340,52 @@ input[type="number"]::-webkit-inner-spin-button { opacity: 1; }
 
 .btn-generate:hover { background: #0b85e0; }
 
-.btn-download {
+.btn-export {
   background: #333;
   color: #ccc;
 }
 
-.btn-download:hover { background: #444; }
+.btn-export:hover { background: #444; }
+
+.export-group { position: relative; }
+
+.export-dropdown {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 0; right: 0;
+  margin-bottom: 4px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  overflow: hidden;
+  z-index: 100;
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.4);
+}
+
+.export-dropdown.open { display: block; }
+
+.export-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  width: 100%;
+  color: #ccc;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-transform: lowercase;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.export-option:hover { background: #333; }
+.export-option .fmt-label { font-weight: 500; color: #fff; min-width: 60px; }
+.export-option .fmt-desc { color: #888; font-size: 11px; }
+.export-option + .export-option { border-top: 1px solid #333; }
 
 /* ── canvas area ── */
 .canvas-area {
@@ -390,7 +430,15 @@ canvas {
 
   <div class="bottom-buttons">
     <button class="btn-generate" id="btn-generate">generate</button>
-    <button class="btn-download" id="btn-download">download png</button>
+    <div class="export-group">
+      <div class="export-dropdown" id="export-dropdown">
+        <button class="export-option" data-fmt="png"><span class="fmt-label">png</span><span class="fmt-desc">raster, transparent-ready</span></button>
+        <button class="export-option" data-fmt="jpeg"><span class="fmt-label">jpeg</span><span class="fmt-desc">compressed raster, smaller file</span></button>
+        <button class="export-option" data-fmt="svg"><span class="fmt-label">svg</span><span class="fmt-desc">vector, scalable</span></button>
+        <button class="export-option" data-fmt="html"><span class="fmt-label">html/css</span><span class="fmt-desc">standalone page with inline styles</span></button>
+      </div>
+      <button class="btn-export" id="btn-export">export &#9660;</button>
+    </div>
   </div>
 </div>
 
@@ -584,14 +632,12 @@ const renderBackgroundControls = () => {
 };
 
 const renderFrameControls = () => {
-  // presets
   let presetsHtml = `<div class="preset-row">`;
   for (const name of Object.keys(presets)) {
     presetsHtml += `<button class="preset-pill ${frameState.preset === name ? 'active' : ''}" data-preset="${name}">${name}</button>`;
   }
   presetsHtml += `</div>`;
 
-  // profile stack
   let profileHtml = `<div class="profile-stack" id="profile-stack">`;
   frameState.profiles.forEach((p, i) => {
     profileHtml += `<span class="profile-tag">${p}<span class="remove-profile" data-idx="${i}">&times;</span></span>`;
@@ -599,17 +645,14 @@ const renderFrameControls = () => {
   profileHtml += `</div>`;
   profileHtml += `<div class="add-profile-row">${buildSelect('add-profile-sel', profileOptions, profileOptions[0])}<button class="add-btn" id="add-profile-btn">+ add</button></div>`;
 
-  // ornament zones
   let ornHtml = '';
   ['A','B','C','D'].forEach(z => {
     const key = `ornament${z}`;
     ornHtml += `<div class="zone-row"><span class="zone-label">${z.toLowerCase()}</span>${buildSelect(`orn-${z}`, ornamentOptions, frameState[key])}</div>`;
   });
 
-  // corners
   let cornerHtml = buildSelect('frame-corners', cornerOptions, frameState.corners);
 
-  // finish
   const finishNames = Object.keys(PAL.frameFinishes);
   const finishColors = finishNames.map(n => PAL.frameFinishes[n]);
   let finishHtml = `<div class="swatch-grid" data-group="frame-finish">`;
@@ -618,11 +661,9 @@ const renderFrameControls = () => {
   });
   finishHtml += `</div>`;
 
-  // liner, aging
   let linerHtml = buildSelect('frame-liner', linerOptions, frameState.liner);
   let agingHtml = buildSelect('frame-aging', agingOptions, frameState.aging);
 
-  // dims
   let dimHtml = `<div class="dim-row"><input type="number" id="fr-w" value="${frameState.width}" min="50" max="2000"><span>x</span><input type="number" id="fr-h" value="${frameState.height}" min="50" max="2000"></div>`;
 
   return presetsHtml
@@ -646,14 +687,12 @@ const rebuildControls = () => {
 // ════════════════════════════════════════════════════════════════
 
 const attachControlListeners = () => {
-  // section collapse
   $$('.section-header').forEach(h => {
     h.addEventListener('click', () => {
       h.parentElement.classList.toggle('collapsed');
     });
   });
 
-  // swatch clicks
   $$('.swatch').forEach(s => {
     s.addEventListener('click', () => {
       const group = s.dataset.group;
@@ -673,7 +712,6 @@ const attachControlListeners = () => {
     });
   });
 
-  // hex inputs
   $$('.hex-input-row input').forEach(inp => {
     inp.addEventListener('change', () => {
       const val = '#' + inp.value.replace('#','');
@@ -685,7 +723,6 @@ const attachControlListeners = () => {
     });
   });
 
-  // background controls
   if (currentMode === 'background') {
     const wallType = $('#wall-type');
     if (wallType) wallType.addEventListener('change', () => { bgState.wallType = wallType.value; bgState.wallSubType = (wallSubTypes[wallType.value]||[])[0]||''; rebuildControls(); scheduleRender(); });
@@ -707,7 +744,6 @@ const attachControlListeners = () => {
     if (bgH) bgH.addEventListener('change', () => { bgState.height = parseInt(bgH.value)||1000; scheduleRender(); });
   }
 
-  // frame controls
   if (currentMode === 'frames') {
     $$('.preset-pill').forEach(p => {
       p.addEventListener('click', () => {
@@ -765,37 +801,17 @@ const attachControlListeners = () => {
 const drawWall = (ctx, w, h) => {
   const wallColor = bgState.wallColor;
   const rand = seededRandom(42);
-
-  // fill background
   ctx.fillStyle = wallColor;
   ctx.fillRect(0, 0, w, h);
-
-  // determine zones
   const baseH = bgState.baseboardEnabled ? 30 : 0;
   const dividerH = bgState.dividerEnabled ? 20 : 0;
   const lowerH = bgState.lowerEnabled ? h * 0.32 : 0;
   const wallTop = 0;
   const wallBottom = h - lowerH - dividerH - baseH;
-
-  // draw wall covering pattern on upper wall
   drawWallPattern(ctx, 0, wallTop, w, wallBottom, wallColor, bgState.wallType, bgState.wallSubType, rand);
-
-  // lower wall
-  if (bgState.lowerEnabled) {
-    const ly = h - lowerH - baseH;
-    drawLowerWall(ctx, 0, ly, w, lowerH, bgState.lowerColor, bgState.lowerType, rand);
-  }
-
-  // divider
-  if (bgState.dividerEnabled) {
-    const dy = h - lowerH - dividerH - baseH;
-    drawDivider(ctx, 0, dy, w, dividerH, bgState.dividerType, wallColor);
-  }
-
-  // baseboard
-  if (bgState.baseboardEnabled) {
-    drawBaseboard(ctx, 0, h - baseH, w, baseH, bgState.baseboardColor);
-  }
+  if (bgState.lowerEnabled) { const ly = h - lowerH - baseH; drawLowerWall(ctx, 0, ly, w, lowerH, bgState.lowerColor, bgState.lowerType, rand); }
+  if (bgState.dividerEnabled) { const dy = h - lowerH - dividerH - baseH; drawDivider(ctx, 0, dy, w, dividerH, bgState.dividerType, wallColor); }
+  if (bgState.baseboardEnabled) { drawBaseboard(ctx, 0, h - baseH, w, baseH, bgState.baseboardColor); }
 };
 
 const drawWallPattern = (ctx, x, y, w, h, color, type, subType, rand) => {
@@ -803,1017 +819,66 @@ const drawWallPattern = (ctx, x, y, w, h, color, type, subType, rand) => {
   ctx.beginPath();
   ctx.rect(x, y, w, h);
   ctx.clip();
-
   ctx.fillStyle = color;
   ctx.fillRect(x, y, w, h);
-
   const [cr, cg, cb] = hexToRgb(color);
-
   if (type === 'painted') {
-    // subtle texture with noise
-    for (let i = 0; i < 800; i++) {
-      const px = x + rand() * w;
-      const py = y + rand() * h;
-      const a = 0.02 + rand() * 0.03;
-      ctx.fillStyle = `rgba(${rand()>0.5?255:0},${rand()>0.5?255:0},${rand()>0.5?255:0},${a})`;
-      ctx.fillRect(px, py, 2, 2);
-    }
-  } else if (type === 'wallpaper') {
-    drawWallpaperPattern(ctx, x, y, w, h, color, subType, rand);
-  } else if (type === 'wood') {
-    drawWoodPattern(ctx, x, y, w, h, color, rand);
-  } else if (type === 'fabric') {
-    drawFabricPattern(ctx, x, y, w, h, color, subType, rand);
-  }
-
+    for (let i = 0; i < 800; i++) { const px = x + rand() * w; const py = y + rand() * h; const a = 0.02 + rand() * 0.03; ctx.fillStyle = `rgba(${rand()>0.5?255:0},${rand()>0.5?255:0},${rand()>0.5?255:0},${a})`; ctx.fillRect(px, py, 2, 2); }
+  } else if (type === 'wallpaper') { drawWallpaperPattern(ctx, x, y, w, h, color, subType, rand);
+  } else if (type === 'wood') { drawWoodPattern(ctx, x, y, w, h, color, rand);
+  } else if (type === 'fabric') { drawFabricPattern(ctx, x, y, w, h, color, subType, rand); }
   ctx.restore();
 };
 
 const drawWallpaperPattern = (ctx, x, y, w, h, color, sub, rand) => {
   const light = shadeColor(color, 20);
   const dark = shadeColor(color, -15);
-
-  if (sub === 'damask' || sub === '') {
-    // damask medallion pattern
-    const spacingX = 180;
-    const spacingY = 200;
-    for (let row = -1; row < h / spacingY + 1; row++) {
-      for (let col = -1; col < w / spacingX + 1; col++) {
-        const cx = x + col * spacingX + (row % 2 === 0 ? 0 : spacingX / 2);
-        const cy = y + row * spacingY;
-        drawDamaskMedallion(ctx, cx, cy, light, dark, 0.4);
-      }
-    }
-  } else if (sub === 'morris') {
-    // william morris botanical
-    const sp = 140;
-    for (let row = -1; row < h / sp + 1; row++) {
-      for (let col = -1; col < w / sp + 1; col++) {
-        const cx = x + col * sp + (row % 2 === 0 ? 0 : sp / 2);
-        const cy = y + row * sp;
-        drawMorrisMotif(ctx, cx, cy, light, dark);
-      }
-    }
-  } else if (sub === 'stripes') {
-    const sw = 40;
-    for (let sx = x; sx < x + w; sx += sw * 2) {
-      ctx.fillStyle = light;
-      ctx.globalAlpha = 0.25;
-      ctx.fillRect(sx, y, sw, h);
-    }
-    ctx.globalAlpha = 1;
-  } else if (sub === 'flock') {
-    const spacingX = 160;
-    const spacingY = 180;
-    for (let row = -1; row < h / spacingY + 1; row++) {
-      for (let col = -1; col < w / spacingX + 1; col++) {
-        const cx = x + col * spacingX + (row % 2 === 0 ? 0 : spacingX / 2);
-        const cy = y + row * spacingY;
-        drawDamaskMedallion(ctx, cx, cy, light, dark, 0.55);
-      }
-    }
-  } else if (sub === 'toile') {
-    const sp = 200;
-    for (let row = -1; row < h / sp + 1; row++) {
-      for (let col = -1; col < w / sp + 1; col++) {
-        const cx = x + col * sp + (row % 2 === 0 ? 0 : sp * 0.4);
-        const cy = y + row * sp;
-        drawToileScene(ctx, cx, cy, dark);
-      }
-    }
-  } else if (sub === 'brocade') {
-    const sp = 200;
-    for (let row = -1; row < h / sp + 1; row++) {
-      for (let col = -1; col < w / sp + 1; col++) {
-        const cx = x + col * sp + (row % 2 === 0 ? 0 : sp / 2);
-        const cy = y + row * sp;
-        drawBrocadeMedallion(ctx, cx, cy, light, '#DAA520');
-      }
-    }
-  } else if (sub === 'leather') {
-    const tileSize = 80;
-    for (let row = 0; row < h / tileSize + 1; row++) {
-      for (let col = 0; col < w / tileSize + 1; col++) {
-        const tx = x + col * tileSize;
-        const ty = y + row * tileSize;
-        ctx.strokeStyle = dark;
-        ctx.lineWidth = 2;
-        ctx.strokeRect(tx + 4, ty + 4, tileSize - 8, tileSize - 8);
-        ctx.strokeStyle = light;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(tx + 6, ty + 6, tileSize - 12, tileSize - 12);
-      }
-    }
-  }
+  if (sub === 'damask' || sub === '') { const spacingX = 180; const spacingY = 200; for (let row = -1; row < h / spacingY + 1; row++) { for (let col = -1; col < w / spacingX + 1; col++) { const cx = x + col * spacingX + (row % 2 === 0 ? 0 : spacingX / 2); const cy = y + row * spacingY; drawDamaskMedallion(ctx, cx, cy, light, dark, 0.4); } }
+  } else if (sub === 'morris') { const sp = 140; for (let row = -1; row < h / sp + 1; row++) { for (let col = -1; col < w / sp + 1; col++) { const cx = x + col * sp + (row % 2 === 0 ? 0 : sp / 2); const cy = y + row * sp; drawMorrisMotif(ctx, cx, cy, light, dark); } }
+  } else if (sub === 'stripes') { const sw = 40; for (let sx = x; sx < x + w; sx += sw * 2) { ctx.fillStyle = light; ctx.globalAlpha = 0.25; ctx.fillRect(sx, y, sw, h); } ctx.globalAlpha = 1;
+  } else if (sub === 'flock') { const spacingX = 160; const spacingY = 180; for (let row = -1; row < h / spacingY + 1; row++) { for (let col = -1; col < w / spacingX + 1; col++) { const cx = x + col * spacingX + (row % 2 === 0 ? 0 : spacingX / 2); const cy = y + row * spacingY; drawDamaskMedallion(ctx, cx, cy, light, dark, 0.55); } }
+  } else if (sub === 'toile') { const sp = 200; for (let row = -1; row < h / sp + 1; row++) { for (let col = -1; col < w / sp + 1; col++) { const cx = x + col * sp + (row % 2 === 0 ? 0 : sp * 0.4); const cy = y + row * sp; drawToileScene(ctx, cx, cy, dark); } }
+  } else if (sub === 'brocade') { const sp = 200; for (let row = -1; row < h / sp + 1; row++) { for (let col = -1; col < w / sp + 1; col++) { const cx = x + col * sp + (row % 2 === 0 ? 0 : sp / 2); const cy = y + row * sp; drawBrocadeMedallion(ctx, cx, cy, light, '#DAA520'); } }
+  } else if (sub === 'leather') { const tileSize = 80; for (let row = 0; row < h / tileSize + 1; row++) { for (let col = 0; col < w / tileSize + 1; col++) { const tx = x + col * tileSize; const ty = y + row * tileSize; ctx.strokeStyle = dark; ctx.lineWidth = 2; ctx.strokeRect(tx + 4, ty + 4, tileSize - 8, tileSize - 8); ctx.strokeStyle = light; ctx.lineWidth = 1; ctx.strokeRect(tx + 6, ty + 6, tileSize - 12, tileSize - 12); } } }
 };
 
-const drawDamaskMedallion = (ctx, cx, cy, light, dark, alpha) => {
-  ctx.save();
-  ctx.globalAlpha = alpha;
+const drawDamaskMedallion = (ctx, cx, cy, light, dark, alpha) => { ctx.save(); ctx.globalAlpha = alpha; ctx.beginPath(); ctx.moveTo(cx, cy - 70); ctx.bezierCurveTo(cx + 40, cy - 60, cx + 50, cy - 30, cx + 45, cy); ctx.bezierCurveTo(cx + 50, cy + 30, cx + 40, cy + 60, cx, cy + 70); ctx.bezierCurveTo(cx - 40, cy + 60, cx - 50, cy + 30, cx - 45, cy); ctx.bezierCurveTo(cx - 50, cy - 30, cx - 40, cy - 60, cx, cy - 70); ctx.fillStyle = light; ctx.fill(); ctx.beginPath(); ctx.moveTo(cx + 45, cy - 20); ctx.bezierCurveTo(cx + 65, cy - 30, cx + 70, cy - 10, cx + 60, cy); ctx.bezierCurveTo(cx + 70, cy + 10, cx + 65, cy + 30, cx + 45, cy + 20); ctx.fillStyle = dark; ctx.fill(); ctx.beginPath(); ctx.moveTo(cx - 45, cy - 20); ctx.bezierCurveTo(cx - 65, cy - 30, cx - 70, cy - 10, cx - 60, cy); ctx.bezierCurveTo(cx - 70, cy + 10, cx - 65, cy + 30, cx - 45, cy + 20); ctx.fill(); ctx.beginPath(); ctx.arc(cx, cy - 85, 4, 0, Math.PI * 2); ctx.arc(cx, cy + 85, 4, 0, Math.PI * 2); ctx.fillStyle = light; ctx.fill(); ctx.globalAlpha = 1; ctx.restore(); };
 
-  // central cartouche
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - 70);
-  ctx.bezierCurveTo(cx + 40, cy - 60, cx + 50, cy - 30, cx + 45, cy);
-  ctx.bezierCurveTo(cx + 50, cy + 30, cx + 40, cy + 60, cx, cy + 70);
-  ctx.bezierCurveTo(cx - 40, cy + 60, cx - 50, cy + 30, cx - 45, cy);
-  ctx.bezierCurveTo(cx - 50, cy - 30, cx - 40, cy - 60, cx, cy - 70);
-  ctx.fillStyle = light;
-  ctx.fill();
+const drawMorrisMotif = (ctx, cx, cy, light, dark) => { ctx.save(); ctx.globalAlpha = 0.35; ctx.strokeStyle = dark; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, cy + 50); ctx.bezierCurveTo(cx + 10, cy + 20, cx - 10, cy - 10, cx, cy - 50); ctx.stroke(); for (let i = -1; i <= 1; i += 2) { ctx.beginPath(); ctx.ellipse(cx + i * 20, cy - 10, 18, 8, i * 0.5, 0, Math.PI * 2); ctx.fillStyle = light; ctx.fill(); ctx.beginPath(); ctx.ellipse(cx + i * 15, cy + 20, 14, 6, i * -0.3, 0, Math.PI * 2); ctx.fill(); } ctx.beginPath(); ctx.arc(cx, cy - 45, 6, 0, Math.PI * 2); ctx.fillStyle = dark; ctx.fill(); ctx.globalAlpha = 1; ctx.restore(); };
 
-  // scrollwork sides
-  ctx.beginPath();
-  ctx.moveTo(cx + 45, cy - 20);
-  ctx.bezierCurveTo(cx + 65, cy - 30, cx + 70, cy - 10, cx + 60, cy);
-  ctx.bezierCurveTo(cx + 70, cy + 10, cx + 65, cy + 30, cx + 45, cy + 20);
-  ctx.fillStyle = dark;
-  ctx.fill();
+const drawToileScene = (ctx, cx, cy, dark) => { ctx.save(); ctx.globalAlpha = 0.2; ctx.strokeStyle = dark; ctx.lineWidth = 1.5; ctx.fillStyle = dark; ctx.beginPath(); ctx.moveTo(cx - 5, cy + 40); ctx.lineTo(cx - 5, cy - 10); ctx.lineTo(cx + 5, cy - 10); ctx.lineTo(cx + 5, cy + 40); ctx.stroke(); ctx.beginPath(); ctx.arc(cx, cy - 30, 25, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.arc(cx - 15, cy - 20, 18, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.arc(cx + 15, cy - 20, 18, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.arc(cx + 50, cy + 10, 8, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(cx + 50, cy + 18); ctx.lineTo(cx + 50, cy + 45); ctx.moveTo(cx + 40, cy + 30); ctx.lineTo(cx + 60, cy + 30); ctx.stroke(); ctx.globalAlpha = 1; ctx.restore(); };
 
-  ctx.beginPath();
-  ctx.moveTo(cx - 45, cy - 20);
-  ctx.bezierCurveTo(cx - 65, cy - 30, cx - 70, cy - 10, cx - 60, cy);
-  ctx.bezierCurveTo(cx - 70, cy + 10, cx - 65, cy + 30, cx - 45, cy + 20);
-  ctx.fill();
+const drawBrocadeMedallion = (ctx, cx, cy, light, gold) => { ctx.save(); ctx.globalAlpha = 0.4; ctx.beginPath(); for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; const r = 40 + Math.sin(i * 3) * 10; const px = cx + Math.cos(a) * r; const py = cy + Math.sin(a) * r; i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py); } ctx.closePath(); ctx.fillStyle = gold; ctx.fill(); ctx.beginPath(); ctx.arc(cx, cy, 20, 0, Math.PI * 2); ctx.fillStyle = light; ctx.fill(); ctx.globalAlpha = 1; ctx.restore(); };
 
-  // small dots above and below
-  ctx.beginPath();
-  ctx.arc(cx, cy - 85, 4, 0, Math.PI * 2);
-  ctx.arc(cx, cy + 85, 4, 0, Math.PI * 2);
-  ctx.fillStyle = light;
-  ctx.fill();
+const drawWoodPattern = (ctx, x, y, w, h, color, rand) => { const plankH = 60; const light = shadeColor(color, 15); const dark = shadeColor(color, -15); for (let py = y; py < y + h; py += plankH) { const plankColor = rand() > 0.5 ? light : dark; ctx.fillStyle = plankColor; ctx.fillRect(x, py, w, plankH - 2); ctx.strokeStyle = shadeColor(plankColor, -10); ctx.lineWidth = 0.5; ctx.globalAlpha = 0.3; for (let g = 0; g < 5; g++) { const gy = py + rand() * plankH; ctx.beginPath(); ctx.moveTo(x, gy); for (let gx = x; gx < x + w; gx += 40) { ctx.lineTo(gx + 40, gy + (rand() - 0.5) * 4); } ctx.stroke(); } ctx.globalAlpha = 1; ctx.fillStyle = shadeColor(color, -25); ctx.fillRect(x, py + plankH - 2, w, 2); } };
 
-  ctx.globalAlpha = 1;
-  ctx.restore();
-};
+const drawFabricPattern = (ctx, x, y, w, h, color, sub, rand) => { const light = shadeColor(color, 12); const dark = shadeColor(color, -8); if (sub === 'silk' || sub === '') { for (let sy = y; sy < y + h; sy += 3) { ctx.fillStyle = sy % 6 === 0 ? light : color; ctx.globalAlpha = 0.15; ctx.fillRect(x, sy, w, 2); } ctx.globalAlpha = 1; } else if (sub === 'velvet') { ctx.fillStyle = mulColor(color, 0.85); ctx.fillRect(x, y, w, h); for (let i = 0; i < 600; i++) { ctx.fillStyle = `rgba(255,255,255,${0.01 + rand() * 0.02})`; ctx.fillRect(x + rand() * w, y + rand() * h, 1, 1); } } else if (sub === 'linen') { ctx.strokeStyle = dark; ctx.lineWidth = 0.5; ctx.globalAlpha = 0.15; const sp = 4; for (let lx = x; lx < x + w; lx += sp) { ctx.beginPath(); ctx.moveTo(lx, y); ctx.lineTo(lx, y + h); ctx.stroke(); } for (let ly = y; ly < y + h; ly += sp) { ctx.beginPath(); ctx.moveTo(x, ly); ctx.lineTo(x + w, ly); ctx.stroke(); } ctx.globalAlpha = 1; } };
 
-const drawMorrisMotif = (ctx, cx, cy, light, dark) => {
-  ctx.save();
-  ctx.globalAlpha = 0.35;
+const drawLowerWall = (ctx, x, y, w, h, color, type, rand) => { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); const light = shadeColor(color, 20); const dark = shadeColor(color, -20); if (type === 'beadboard') { const bw = 24; ctx.strokeStyle = dark; ctx.lineWidth = 1; for (let bx = x; bx < x + w; bx += bw) { ctx.beginPath(); ctx.moveTo(bx, y); ctx.lineTo(bx, y + h); ctx.stroke(); ctx.strokeStyle = light; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(bx + 1, y); ctx.lineTo(bx + 1, y + h); ctx.stroke(); ctx.strokeStyle = dark; ctx.lineWidth = 1; } } else if (type === 'raised panel') { const panelW = 200, panelPad = 20, panelInner = 12; const count = Math.ceil(w / panelW); for (let i = 0; i < count; i++) { const px = x + i * panelW + panelPad; const py = y + panelPad; const pw = panelW - panelPad * 2; const ph = h - panelPad * 2; ctx.fillStyle = light; ctx.fillRect(px, py, pw, ph); ctx.fillStyle = dark; ctx.fillRect(px + 3, py + 3, pw - 3, ph - 3); ctx.fillStyle = color; ctx.fillRect(px + 6, py + 6, pw - 9, ph - 9); ctx.fillStyle = light; ctx.fillRect(px + panelInner, py + panelInner, pw - panelInner * 2, ph - panelInner * 2); ctx.fillStyle = dark; ctx.fillRect(px + panelInner + 2, py + panelInner + 2, pw - panelInner * 2 - 2, ph - panelInner * 2 - 2); ctx.fillStyle = shadeColor(color, 5); ctx.fillRect(px + panelInner + 4, py + panelInner + 4, pw - panelInner * 2 - 6, ph - panelInner * 2 - 6); } } else if (type === 'flat panel') { const panelW = 200, pad = 18; const count = Math.ceil(w / panelW); for (let i = 0; i < count; i++) { ctx.strokeStyle = dark; ctx.lineWidth = 2; ctx.strokeRect(x + i * panelW + pad, y + pad, panelW - pad * 2, h - pad * 2); } } else if (type === 'board & batten') { const bw = 100, batW = 8; for (let bx = x; bx < x + w; bx += bw) { ctx.fillStyle = dark; ctx.fillRect(bx + bw / 2 - batW / 2, y, batW, h); ctx.fillStyle = light; ctx.fillRect(bx + bw / 2 - batW / 2 + 1, y, 1, h); } } else if (type === 'stone') { const bh = 50, bw = 120; let rowIdx = 0; for (let sy = y; sy < y + h; sy += bh) { const offset = (rowIdx % 2) * bw / 2; for (let sx = x - bw; sx < x + w + bw; sx += bw) { const stoneColor = shadeColor(color, (rand() - 0.5) * 20); ctx.fillStyle = stoneColor; ctx.fillRect(sx + offset + 2, sy + 2, bw - 4, bh - 4); ctx.strokeStyle = dark; ctx.lineWidth = 2; ctx.strokeRect(sx + offset, sy, bw, bh); } rowIdx++; } } else if (type === 'marble') { ctx.fillStyle = '#f0ece4'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = '#d0ccc4'; ctx.lineWidth = 1; ctx.globalAlpha = 0.4; for (let i = 0; i < 15; i++) { ctx.beginPath(); const sx = x + rand() * w; const sy = y + rand() * h; ctx.moveTo(sx, sy); for (let j = 0; j < 6; j++) { ctx.lineTo(sx + (rand() - 0.3) * 200, sy + (rand() - 0.5) * 80); } ctx.stroke(); } ctx.globalAlpha = 1; } else if (type === 'wood planks') { drawWoodPattern(ctx, x, y, w, h, color, rand); } };
 
-  // stem
-  ctx.strokeStyle = dark;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(cx, cy + 50);
-  ctx.bezierCurveTo(cx + 10, cy + 20, cx - 10, cy - 10, cx, cy - 50);
-  ctx.stroke();
+const drawDivider = (ctx, x, y, w, h, type, wallColor) => { const light = shadeColor(wallColor, 40); const mid = shadeColor(wallColor, 20); const dark = shadeColor(wallColor, -10); if (type === 'chair rail') { ctx.fillStyle = light; ctx.fillRect(x, y, w, h); ctx.fillStyle = mid; ctx.fillRect(x, y + 3, w, h - 6); ctx.fillStyle = dark; ctx.fillRect(x, y + h - 3, w, 3); ctx.fillStyle = light; ctx.fillRect(x, y + 1, w, 2); } else if (type === 'molding') { ctx.fillStyle = mid; ctx.fillRect(x, y, w, h); ctx.fillStyle = light; ctx.fillRect(x, y, w, 4); ctx.fillStyle = dark; ctx.fillRect(x, y + h - 4, w, 4); ctx.fillStyle = light; ctx.fillRect(x, y + h / 2 - 2, w, 3); } else if (type === 'picture rail') { ctx.fillStyle = mid; ctx.fillRect(x, y, w, h); ctx.fillStyle = light; ctx.fillRect(x, y + 2, w, 3); ctx.fillStyle = dark; ctx.fillRect(x, y + h - 2, w, 2); } };
 
-  // paired leaves
-  for (let i = -1; i <= 1; i += 2) {
-    ctx.beginPath();
-    ctx.ellipse(cx + i * 20, cy - 10, 18, 8, i * 0.5, 0, Math.PI * 2);
-    ctx.fillStyle = light;
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(cx + i * 15, cy + 20, 14, 6, i * -0.3, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // flower dot
-  ctx.beginPath();
-  ctx.arc(cx, cy - 45, 6, 0, Math.PI * 2);
-  ctx.fillStyle = dark;
-  ctx.fill();
-
-  ctx.globalAlpha = 1;
-  ctx.restore();
-};
-
-const drawToileScene = (ctx, cx, cy, dark) => {
-  ctx.save();
-  ctx.globalAlpha = 0.2;
-  ctx.strokeStyle = dark;
-  ctx.lineWidth = 1.5;
-  ctx.fillStyle = dark;
-
-  // simple pastoral: tree + figure outline
-  // tree
-  ctx.beginPath();
-  ctx.moveTo(cx - 5, cy + 40);
-  ctx.lineTo(cx - 5, cy - 10);
-  ctx.lineTo(cx + 5, cy - 10);
-  ctx.lineTo(cx + 5, cy + 40);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(cx, cy - 30, 25, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(cx - 15, cy - 20, 18, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(cx + 15, cy - 20, 18, 0, Math.PI * 2);
-  ctx.stroke();
-
-  // figure
-  ctx.beginPath();
-  ctx.arc(cx + 50, cy + 10, 8, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(cx + 50, cy + 18);
-  ctx.lineTo(cx + 50, cy + 45);
-  ctx.moveTo(cx + 40, cy + 30);
-  ctx.lineTo(cx + 60, cy + 30);
-  ctx.stroke();
-
-  ctx.globalAlpha = 1;
-  ctx.restore();
-};
-
-const drawBrocadeMedallion = (ctx, cx, cy, light, gold) => {
-  ctx.save();
-  ctx.globalAlpha = 0.4;
-
-  ctx.beginPath();
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2;
-    const r = 40 + Math.sin(i * 3) * 10;
-    const px = cx + Math.cos(a) * r;
-    const py = cy + Math.sin(a) * r;
-    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-  }
-  ctx.closePath();
-  ctx.fillStyle = gold;
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.arc(cx, cy, 20, 0, Math.PI * 2);
-  ctx.fillStyle = light;
-  ctx.fill();
-
-  ctx.globalAlpha = 1;
-  ctx.restore();
-};
-
-const drawWoodPattern = (ctx, x, y, w, h, color, rand) => {
-  const plankH = 60;
-  const light = shadeColor(color, 15);
-  const dark = shadeColor(color, -15);
-
-  for (let py = y; py < y + h; py += plankH) {
-    // plank base
-    const plankColor = rand() > 0.5 ? light : dark;
-    ctx.fillStyle = plankColor;
-    ctx.fillRect(x, py, w, plankH - 2);
-
-    // grain lines
-    ctx.strokeStyle = shadeColor(plankColor, -10);
-    ctx.lineWidth = 0.5;
-    ctx.globalAlpha = 0.3;
-    for (let g = 0; g < 5; g++) {
-      const gy = py + rand() * plankH;
-      ctx.beginPath();
-      ctx.moveTo(x, gy);
-      for (let gx = x; gx < x + w; gx += 40) {
-        ctx.lineTo(gx + 40, gy + (rand() - 0.5) * 4);
-      }
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-
-    // seam
-    ctx.fillStyle = shadeColor(color, -25);
-    ctx.fillRect(x, py + plankH - 2, w, 2);
-  }
-};
-
-const drawFabricPattern = (ctx, x, y, w, h, color, sub, rand) => {
-  const light = shadeColor(color, 12);
-  const dark = shadeColor(color, -8);
-
-  if (sub === 'silk' || sub === '') {
-    // horizontal sheen
-    for (let sy = y; sy < y + h; sy += 3) {
-      ctx.fillStyle = sy % 6 === 0 ? light : color;
-      ctx.globalAlpha = 0.15;
-      ctx.fillRect(x, sy, w, 2);
-    }
-    ctx.globalAlpha = 1;
-  } else if (sub === 'velvet') {
-    // deep solid with subtle noise
-    ctx.fillStyle = mulColor(color, 0.85);
-    ctx.fillRect(x, y, w, h);
-    for (let i = 0; i < 600; i++) {
-      ctx.fillStyle = `rgba(255,255,255,${0.01 + rand() * 0.02})`;
-      ctx.fillRect(x + rand() * w, y + rand() * h, 1, 1);
-    }
-  } else if (sub === 'linen') {
-    // crosshatch
-    ctx.strokeStyle = dark;
-    ctx.lineWidth = 0.5;
-    ctx.globalAlpha = 0.15;
-    const sp = 4;
-    for (let lx = x; lx < x + w; lx += sp) {
-      ctx.beginPath(); ctx.moveTo(lx, y); ctx.lineTo(lx, y + h); ctx.stroke();
-    }
-    for (let ly = y; ly < y + h; ly += sp) {
-      ctx.beginPath(); ctx.moveTo(x, ly); ctx.lineTo(x + w, ly); ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-  }
-};
-
-const drawLowerWall = (ctx, x, y, w, h, color, type, rand) => {
-  ctx.fillStyle = color;
-  ctx.fillRect(x, y, w, h);
-
-  const light = shadeColor(color, 20);
-  const dark = shadeColor(color, -20);
-
-  if (type === 'beadboard') {
-    const bw = 24;
-    ctx.strokeStyle = dark;
-    ctx.lineWidth = 1;
-    for (let bx = x; bx < x + w; bx += bw) {
-      ctx.beginPath(); ctx.moveTo(bx, y); ctx.lineTo(bx, y + h); ctx.stroke();
-      ctx.strokeStyle = light; ctx.lineWidth = 0.5;
-      ctx.beginPath(); ctx.moveTo(bx + 1, y); ctx.lineTo(bx + 1, y + h); ctx.stroke();
-      ctx.strokeStyle = dark; ctx.lineWidth = 1;
-    }
-  } else if (type === 'raised panel') {
-    const panelW = 200;
-    const panelPad = 20;
-    const panelInner = 12;
-    const count = Math.ceil(w / panelW);
-    for (let i = 0; i < count; i++) {
-      const px = x + i * panelW + panelPad;
-      const py = y + panelPad;
-      const pw = panelW - panelPad * 2;
-      const ph = h - panelPad * 2;
-
-      // outer bevel
-      ctx.fillStyle = light;
-      ctx.fillRect(px, py, pw, ph);
-      ctx.fillStyle = dark;
-      ctx.fillRect(px + 3, py + 3, pw - 3, ph - 3);
-      ctx.fillStyle = color;
-      ctx.fillRect(px + 6, py + 6, pw - 9, ph - 9);
-
-      // raised center
-      ctx.fillStyle = light;
-      ctx.fillRect(px + panelInner, py + panelInner, pw - panelInner * 2, ph - panelInner * 2);
-      ctx.fillStyle = dark;
-      ctx.fillRect(px + panelInner + 2, py + panelInner + 2, pw - panelInner * 2 - 2, ph - panelInner * 2 - 2);
-      ctx.fillStyle = shadeColor(color, 5);
-      ctx.fillRect(px + panelInner + 4, py + panelInner + 4, pw - panelInner * 2 - 6, ph - panelInner * 2 - 6);
-    }
-  } else if (type === 'flat panel') {
-    const panelW = 200;
-    const pad = 18;
-    const count = Math.ceil(w / panelW);
-    for (let i = 0; i < count; i++) {
-      ctx.strokeStyle = dark;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x + i * panelW + pad, y + pad, panelW - pad * 2, h - pad * 2);
-    }
-  } else if (type === 'board & batten') {
-    const bw = 100;
-    const batW = 8;
-    for (let bx = x; bx < x + w; bx += bw) {
-      ctx.fillStyle = dark;
-      ctx.fillRect(bx + bw / 2 - batW / 2, y, batW, h);
-      ctx.fillStyle = light;
-      ctx.fillRect(bx + bw / 2 - batW / 2 + 1, y, 1, h);
-    }
-  } else if (type === 'stone') {
-    const bh = 50;
-    const bw = 120;
-    let rowIdx = 0;
-    for (let sy = y; sy < y + h; sy += bh) {
-      const offset = (rowIdx % 2) * bw / 2;
-      for (let sx = x - bw; sx < x + w + bw; sx += bw) {
-        const stoneColor = shadeColor(color, (rand() - 0.5) * 20);
-        ctx.fillStyle = stoneColor;
-        ctx.fillRect(sx + offset + 2, sy + 2, bw - 4, bh - 4);
-        ctx.strokeStyle = dark;
-        ctx.lineWidth = 2;
-        ctx.strokeRect(sx + offset, sy, bw, bh);
-      }
-      rowIdx++;
-    }
-  } else if (type === 'marble') {
-    ctx.fillStyle = '#f0ece4';
-    ctx.fillRect(x, y, w, h);
-    ctx.strokeStyle = '#d0ccc4';
-    ctx.lineWidth = 1;
-    ctx.globalAlpha = 0.4;
-    for (let i = 0; i < 15; i++) {
-      ctx.beginPath();
-      const sx = x + rand() * w;
-      const sy = y + rand() * h;
-      ctx.moveTo(sx, sy);
-      for (let j = 0; j < 6; j++) {
-        ctx.lineTo(sx + (rand() - 0.3) * 200, sy + (rand() - 0.5) * 80);
-      }
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-  } else if (type === 'wood planks') {
-    drawWoodPattern(ctx, x, y, w, h, color, rand);
-  }
-};
-
-const drawDivider = (ctx, x, y, w, h, type, wallColor) => {
-  const light = shadeColor(wallColor, 40);
-  const mid = shadeColor(wallColor, 20);
-  const dark = shadeColor(wallColor, -10);
-
-  if (type === 'chair rail') {
-    ctx.fillStyle = light;
-    ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = mid;
-    ctx.fillRect(x, y + 3, w, h - 6);
-    ctx.fillStyle = dark;
-    ctx.fillRect(x, y + h - 3, w, 3);
-    // highlight
-    ctx.fillStyle = light;
-    ctx.fillRect(x, y + 1, w, 2);
-  } else if (type === 'molding') {
-    ctx.fillStyle = mid;
-    ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = light;
-    ctx.fillRect(x, y, w, 4);
-    ctx.fillStyle = dark;
-    ctx.fillRect(x, y + h - 4, w, 4);
-    // center ridge
-    ctx.fillStyle = light;
-    ctx.fillRect(x, y + h / 2 - 2, w, 3);
-  } else if (type === 'picture rail') {
-    ctx.fillStyle = mid;
-    ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = light;
-    ctx.fillRect(x, y + 2, w, 3);
-    ctx.fillStyle = dark;
-    ctx.fillRect(x, y + h - 2, w, 2);
-  }
-};
-
-const drawBaseboard = (ctx, x, y, w, h, color) => {
-  const light = shadeColor(color, 25);
-  const dark = shadeColor(color, -20);
-  ctx.fillStyle = color;
-  ctx.fillRect(x, y, w, h);
-  ctx.fillStyle = light;
-  ctx.fillRect(x, y, w, 3);
-  ctx.fillStyle = dark;
-  ctx.fillRect(x, y + h - 2, w, 2);
-};
+const drawBaseboard = (ctx, x, y, w, h, color) => { const light = shadeColor(color, 25); const dark = shadeColor(color, -20); ctx.fillStyle = color; ctx.fillRect(x, y, w, h); ctx.fillStyle = light; ctx.fillRect(x, y, w, 3); ctx.fillStyle = dark; ctx.fillRect(x, y + h - 2, w, 2); };
 
 // ════════════════════════════════════════════════════════════════
 // frame drawing
 // ════════════════════════════════════════════════════════════════
 
-const drawFrame = (ctx, cw, ch) => {
-  const artW = frameState.width;
-  const artH = frameState.height;
-  const profiles = frameState.profiles;
-  const finishColor = PAL.frameFinishes[frameState.finish] || '#DAA520';
+const drawFrame = (ctx, cw, ch) => { const artW = frameState.width; const artH = frameState.height; const profiles = frameState.profiles; const finishColor = PAL.frameFinishes[frameState.finish] || '#DAA520'; const totalProfiles = profiles.length || 1; const railWidth = Math.max(30, Math.min(120, Math.max(artW, artH) * 0.12)); const profileWidth = railWidth / totalProfiles; const linerWidth = frameState.liner !== 'none' ? 12 : 0; const totalW = artW + (railWidth + linerWidth) * 2; const totalH = artH + (railWidth + linerWidth) * 2; const ox = (cw - totalW) / 2; const oy = (ch - totalH) / 2; ctx.fillStyle = '#e8e4dc'; ctx.fillRect(0, 0, cw, ch); ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(ox + 8, oy + 10, totalW, totalH); let inset = 0; profiles.forEach((profile, idx) => { const pw = profileWidth; const rx = ox + inset; const ry = oy + inset; const rw = totalW - inset * 2; const rh = totalH - inset * 2; drawProfileBand(ctx, rx, ry, rw, rh, pw, profile, finishColor, idx, totalProfiles); const zoneIdx = Math.floor((idx / totalProfiles) * 4); const zoneKey = ['A','B','C','D'][zoneIdx]; const ornament = frameState[`ornament${zoneKey}`]; if (ornament && ornament !== 'none') { drawOrnaments(ctx, rx, ry, rw, rh, pw, ornament, finishColor); } inset += pw; }); if (frameState.corners !== 'plain miter') { drawCornerOrnaments(ctx, ox, oy, totalW, totalH, railWidth, frameState.corners, finishColor); } if (frameState.liner !== 'none') { const lx = ox + railWidth; const ly = oy + railWidth; const lw = totalW - railWidth * 2; const lh = totalH - railWidth * 2; drawLiner(ctx, lx, ly, lw, lh, linerWidth, frameState.liner, finishColor); } const ax = ox + railWidth + linerWidth; const ay = oy + railWidth + linerWidth; ctx.fillStyle = '#d4d0c8'; ctx.fillRect(ax, ay, artW, artH); ctx.strokeStyle = '#bbb8b0'; ctx.lineWidth = 1; ctx.strokeRect(ax, ay, artW, artH); ctx.strokeStyle = '#c0bdb5'; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax + artW, ay + artH); ctx.moveTo(ax + artW, ay); ctx.lineTo(ax, ay + artH); ctx.stroke(); if (frameState.aging !== 'none') { const agingAlpha = frameState.aging === 'light' ? 0.08 : frameState.aging === 'medium' ? 0.18 : 0.3; ctx.fillStyle = `rgba(30,20,10,${agingAlpha})`; ctx.fillRect(ox, oy, totalW, totalH); if (frameState.aging !== 'light') { ctx.fillStyle = `rgba(20,15,5,${agingAlpha * 0.6})`; const darkBand = 4; ctx.fillRect(ox + railWidth - darkBand, oy + railWidth - darkBand, artW + linerWidth * 2 + darkBand * 2, darkBand); ctx.fillRect(ox + railWidth - darkBand, oy + railWidth, darkBand, artH + linerWidth * 2); ctx.fillRect(ox + totalW - railWidth, oy + railWidth, darkBand, artH + linerWidth * 2); ctx.fillRect(ox + railWidth - darkBand, oy + totalH - railWidth, artW + linerWidth * 2 + darkBand * 2, darkBand); } } };
 
-  // calculate rail width
-  const totalProfiles = profiles.length || 1;
-  const railWidth = Math.max(30, Math.min(120, Math.max(artW, artH) * 0.12));
-  const profileWidth = railWidth / totalProfiles;
+const drawProfileBand = (ctx, rx, ry, rw, rh, pw, profile, color, idx, total) => { const light = shadeColor(color, 35); const mid = color; const dark = shadeColor(color, -35); drawTrapezoid(ctx, rx, ry, rx + rw, ry, rx + rw - pw, ry + pw, rx + pw, ry + pw, profile, light, mid, dark, 'top'); drawTrapezoid(ctx, rx + pw, ry + rh - pw, rx + rw - pw, ry + rh - pw, rx + rw, ry + rh, rx, ry + rh, profile, light, mid, dark, 'bottom'); drawTrapezoid(ctx, rx, ry, rx + pw, ry + pw, rx + pw, ry + rh - pw, rx, ry + rh, profile, light, mid, dark, 'left'); drawTrapezoid(ctx, rx + rw - pw, ry + pw, rx + rw, ry, rx + rw, ry + rh, rx + rw - pw, ry + rh - pw, profile, light, mid, dark, 'right'); };
 
-  const linerWidth = frameState.liner !== 'none' ? 12 : 0;
-  const totalW = artW + (railWidth + linerWidth) * 2;
-  const totalH = artH + (railWidth + linerWidth) * 2;
+const drawTrapezoid = (ctx, x1, y1, x2, y2, x3, y3, x4, y4, profile, light, mid, dark, side) => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.lineTo(x3, y3); ctx.lineTo(x4, y4); ctx.closePath(); if (profile === 'flat') { ctx.fillStyle = mid; ctx.fill(); } else if (profile === 'ogee') { const grad = createSideGradient(ctx, x1, y1, x3, y3, side); grad.addColorStop(0, light); grad.addColorStop(0.4, mid); grad.addColorStop(1, dark); ctx.fillStyle = grad; ctx.fill(); } else if (profile === 'cushion') { const grad = createSideGradient(ctx, x1, y1, x3, y3, side); grad.addColorStop(0, mid); grad.addColorStop(0.5, light); grad.addColorStop(1, mid); ctx.fillStyle = grad; ctx.fill(); } else if (profile === 'scoop') { const grad = createSideGradient(ctx, x1, y1, x3, y3, side); grad.addColorStop(0, mid); grad.addColorStop(0.5, dark); grad.addColorStop(1, mid); ctx.fillStyle = grad; ctx.fill(); } else if (profile === 'reverse scoop') { const grad = createSideGradient(ctx, x1, y1, x3, y3, side); grad.addColorStop(0, dark); grad.addColorStop(0.5, light); grad.addColorStop(1, dark); ctx.fillStyle = grad; ctx.fill(); } else if (profile === 'bead') { ctx.fillStyle = mid; ctx.fill(); const cx = (x1+x2+x3+x4)/4; const cy = (y1+y2+y3+y4)/4; const len = side==='top'||side==='bottom' ? Math.abs(x2-x1) : Math.abs(y4-y1); const count = Math.floor(len/12); ctx.fillStyle = light; for (let i=0;i<count;i++) { const t=i/count; let px,py; if(side==='top'){px=x1+(x2-x1)*t+(x4-x1+(x3-x2-x4+x1)*t)*0.5;py=y1+(y4-y1)*0.5;} else if(side==='bottom'){px=x4+(x3-x4)*t+(x1-x4+(x2-x3-x1+x4)*t)*0.5;py=y4+(y1-y4)*0.5;} else if(side==='left'){px=x1+(x4-x1)*0.5;py=y1+(y4-y1)*t;} else{px=x2+(x3-x2)*0.5;py=y2+(y3-y2)*t;} ctx.beginPath(); ctx.arc(px,py,2.5,0,Math.PI*2); ctx.fill(); } } else if (profile === 'bolection') { const grad = createSideGradient(ctx, x1, y1, x3, y3, side); grad.addColorStop(0, light); grad.addColorStop(0.3, mid); grad.addColorStop(0.7, dark); grad.addColorStop(1, shadeColor(dark, -15)); ctx.fillStyle = grad; ctx.fill(); } else if (profile === 'fillet') { ctx.fillStyle = mid; ctx.fill(); ctx.strokeStyle = light; ctx.lineWidth = 1; ctx.stroke(); } else if (profile === 'astragal') { const grad = createSideGradient(ctx, x1, y1, x3, y3, side); grad.addColorStop(0, light); grad.addColorStop(0.5, mid); grad.addColorStop(1, dark); ctx.fillStyle = grad; ctx.fill(); ctx.strokeStyle = shadeColor(light, 15); ctx.lineWidth = 1; ctx.beginPath(); if(side==='top'||side==='bottom'){const my=(y1+y4)/2;ctx.moveTo(x1,my);ctx.lineTo(x2,my);}else{const mx=(x1+x2)/2;ctx.moveTo(mx,y1);ctx.lineTo(mx,y4);} ctx.stroke(); } else if (profile === 'cavetto') { const grad = createSideGradient(ctx, x1, y1, x3, y3, side); grad.addColorStop(0, mid); grad.addColorStop(1, dark); ctx.fillStyle = grad; ctx.fill(); } else if (profile === 'scotia') { const grad = createSideGradient(ctx, x1, y1, x3, y3, side); grad.addColorStop(0, dark); grad.addColorStop(0.7, mid); grad.addColorStop(1, light); ctx.fillStyle = grad; ctx.fill(); } else if (profile === 'chamfer') { const grad = createSideGradient(ctx, x1, y1, x3, y3, side); grad.addColorStop(0, light); grad.addColorStop(1, mid); ctx.fillStyle = grad; ctx.fill(); } else if (profile === 'bevel') { const grad = createSideGradient(ctx, x1, y1, x3, y3, side); grad.addColorStop(0, light); grad.addColorStop(1, dark); ctx.fillStyle = grad; ctx.fill(); } else if (profile === 'torus') { const grad = createSideGradient(ctx, x1, y1, x3, y3, side); grad.addColorStop(0, mid); grad.addColorStop(0.3, light); grad.addColorStop(0.7, light); grad.addColorStop(1, mid); ctx.fillStyle = grad; ctx.fill(); } else if (profile === 'quirk') { ctx.fillStyle = mid; ctx.fill(); ctx.strokeStyle = dark; ctx.lineWidth = 1.5; ctx.beginPath(); if(side==='top'||side==='bottom'){const my=(y1+y4)/2;ctx.moveTo(x1,my);ctx.lineTo(x2,my);}else{const mx=(x1+x2)/2;ctx.moveTo(mx,y1);ctx.lineTo(mx,y4);} ctx.stroke(); } else { ctx.fillStyle = mid; ctx.fill(); } };
 
-  // center on canvas
-  const ox = (cw - totalW) / 2;
-  const oy = (ch - totalH) / 2;
+const createSideGradient = (ctx, x1, y1, x3, y3, side) => { if (side === 'top') return ctx.createLinearGradient(0, y1, 0, y3); if (side === 'bottom') return ctx.createLinearGradient(0, y3, 0, y1); if (side === 'left') return ctx.createLinearGradient(x1, 0, x3, 0); return ctx.createLinearGradient(x3, 0, x1, 0); };
 
-  // background
-  ctx.fillStyle = '#e8e4dc';
-  ctx.fillRect(0, 0, cw, ch);
+const drawOrnaments = (ctx, rx, ry, rw, rh, pw, ornament, color) => { const light = shadeColor(color, 30); const dark = shadeColor(color, -20); const spacing = ornament === 'greek key' ? 24 : ornament === 'guilloche' ? 20 : 16; ctx.save(); ctx.fillStyle = light; ctx.strokeStyle = dark; ctx.lineWidth = 1; ctx.globalAlpha = 0.6; const topY = ry + pw * 0.4; for (let ox = rx + pw + spacing; ox < rx + rw - pw - spacing; ox += spacing) { drawSingleOrnament(ctx, ox, topY, ornament, light, dark, pw * 0.3); } const botY = ry + rh - pw * 0.6; for (let ox = rx + pw + spacing; ox < rx + rw - pw - spacing; ox += spacing) { drawSingleOrnament(ctx, ox, botY, ornament, light, dark, pw * 0.3); } const leftX = rx + pw * 0.4; for (let oy = ry + pw + spacing; oy < ry + rh - pw - spacing; oy += spacing) { drawSingleOrnament(ctx, leftX, oy, ornament, light, dark, pw * 0.3); } const rightX = rx + rw - pw * 0.6; for (let oy = ry + pw + spacing; oy < ry + rh - pw - spacing; oy += spacing) { drawSingleOrnament(ctx, rightX, oy, ornament, light, dark, pw * 0.3); } ctx.globalAlpha = 1; ctx.restore(); };
 
-  // draw wall shadow behind frame
-  ctx.fillStyle = 'rgba(0,0,0,0.15)';
-  ctx.fillRect(ox + 8, oy + 10, totalW, totalH);
+const drawSingleOrnament = (ctx, x, y, type, light, dark, scale) => { const s = Math.max(3, scale); if (type === 'bead') { ctx.beginPath(); ctx.arc(x, y, s*0.4, 0, Math.PI*2); ctx.fillStyle = light; ctx.fill(); } else if (type === 'bead & reel') { ctx.beginPath(); ctx.arc(x, y, s*0.35, 0, Math.PI*2); ctx.fillStyle = light; ctx.fill(); ctx.fillStyle = dark; ctx.fillRect(x+s*0.5, y-s*0.15, s*0.3, s*0.3); } else if (type === 'egg-and-dart') { ctx.beginPath(); ctx.ellipse(x, y, s*0.35, s*0.5, 0, 0, Math.PI*2); ctx.fillStyle = light; ctx.fill(); ctx.beginPath(); ctx.moveTo(x+s*0.6, y-s*0.4); ctx.lineTo(x+s*0.7, y); ctx.lineTo(x+s*0.6, y+s*0.4); ctx.fillStyle = dark; ctx.fill(); } else if (type === 'acanthus') { ctx.beginPath(); ctx.moveTo(x, y-s*0.5); ctx.bezierCurveTo(x+s*0.4, y-s*0.3, x+s*0.5, y, x+s*0.3, y+s*0.4); ctx.bezierCurveTo(x+s*0.1, y+s*0.5, x-s*0.1, y+s*0.5, x-s*0.3, y+s*0.4); ctx.bezierCurveTo(x-s*0.5, y, x-s*0.4, y-s*0.3, x, y-s*0.5); ctx.fillStyle = light; ctx.fill(); } else if (type === 'scrolls') { ctx.beginPath(); ctx.arc(x, y-s*0.2, s*0.35, 0, Math.PI, false); ctx.strokeStyle = light; ctx.lineWidth = 1.5; ctx.stroke(); ctx.beginPath(); ctx.arc(x, y+s*0.2, s*0.25, Math.PI, 0, false); ctx.stroke(); } else if (type === 'shell') { ctx.beginPath(); ctx.arc(x, y+s*0.2, s*0.5, Math.PI, 0, false); ctx.fillStyle = light; ctx.fill(); for (let i=0;i<5;i++) { const a = Math.PI + (i/4)*Math.PI; ctx.beginPath(); ctx.moveTo(x, y+s*0.2); ctx.lineTo(x+Math.cos(a)*s*0.5, y+s*0.2+Math.sin(a)*s*0.5); ctx.strokeStyle = dark; ctx.lineWidth = 0.5; ctx.stroke(); } } else if (type === 'rope') { ctx.beginPath(); ctx.moveTo(x-s*0.4, y-s*0.15); ctx.bezierCurveTo(x-s*0.2, y-s*0.4, x+s*0.2, y+s*0.4, x+s*0.4, y+s*0.15); ctx.strokeStyle = light; ctx.lineWidth = 2; ctx.stroke(); } else if (type === 'laurel') { for (let side=-1;side<=1;side+=2) { ctx.beginPath(); ctx.ellipse(x+side*s*0.25, y, s*0.2, s*0.4, side*0.3, 0, Math.PI*2); ctx.fillStyle = light; ctx.fill(); } } else if (type === 'greek key') { ctx.strokeStyle = light; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x-s*0.4, y-s*0.4); ctx.lineTo(x+s*0.4, y-s*0.4); ctx.lineTo(x+s*0.4, y+s*0.1); ctx.lineTo(x-s*0.1, y+s*0.1); ctx.lineTo(x-s*0.1, y+s*0.4); ctx.lineTo(x-s*0.4, y+s*0.4); ctx.stroke(); } else if (type === 'guilloche') { ctx.strokeStyle = light; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, s*0.35, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y, s*0.2, 0, Math.PI*2); ctx.stroke(); } else if (type === 'floral') { for (let p=0;p<5;p++) { const a=(p/5)*Math.PI*2; ctx.beginPath(); ctx.ellipse(x+Math.cos(a)*s*0.25, y+Math.sin(a)*s*0.25, s*0.18, s*0.1, a, 0, Math.PI*2); ctx.fillStyle = light; ctx.fill(); } ctx.beginPath(); ctx.arc(x, y, s*0.12, 0, Math.PI*2); ctx.fillStyle = dark; ctx.fill(); } else if (type === 'vine') { ctx.strokeStyle = light; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x-s*0.5, y); ctx.bezierCurveTo(x-s*0.2, y-s*0.3, x+s*0.2, y+s*0.3, x+s*0.5, y); ctx.stroke(); ctx.beginPath(); ctx.ellipse(x, y-s*0.15, s*0.12, s*0.08, -0.5, 0, Math.PI*2); ctx.fillStyle = light; ctx.fill(); } };
 
-  // draw profiles from outside in
-  let inset = 0;
-  profiles.forEach((profile, idx) => {
-    const pw = profileWidth;
-    const rx = ox + inset;
-    const ry = oy + inset;
-    const rw = totalW - inset * 2;
-    const rh = totalH - inset * 2;
+const drawCornerOrnaments = (ctx, ox, oy, tw, th, railW, cornerType, color) => { const light = shadeColor(color, 35); const dark = shadeColor(color, -20); const s = railW * 0.4; const corners = [[ox+railW*0.5, oy+railW*0.5],[ox+tw-railW*0.5, oy+railW*0.5],[ox+tw-railW*0.5, oy+th-railW*0.5],[ox+railW*0.5, oy+th-railW*0.5]]; ctx.save(); ctx.globalAlpha = 0.7; corners.forEach(([cx, cy]) => { if (cornerType === 'floral burst') { for (let p=0;p<8;p++) { const a=(p/8)*Math.PI*2; ctx.beginPath(); ctx.ellipse(cx+Math.cos(a)*s*0.5, cy+Math.sin(a)*s*0.5, s*0.35, s*0.15, a, 0, Math.PI*2); ctx.fillStyle = light; ctx.fill(); } ctx.beginPath(); ctx.arc(cx, cy, s*0.25, 0, Math.PI*2); ctx.fillStyle = dark; ctx.fill(); } else if (cornerType === 'shell') { ctx.beginPath(); ctx.arc(cx, cy, s*0.7, 0, Math.PI*2); ctx.fillStyle = light; ctx.fill(); for (let r=0;r<8;r++) { const a=(r/8)*Math.PI*2; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx+Math.cos(a)*s*0.7, cy+Math.sin(a)*s*0.7); ctx.strokeStyle = dark; ctx.lineWidth = 1; ctx.stroke(); } } else if (cornerType === 'cartouche') { ctx.beginPath(); ctx.moveTo(cx, cy-s*0.6); ctx.bezierCurveTo(cx+s*0.5, cy-s*0.5, cx+s*0.6, cy, cx+s*0.5, cy+s*0.4); ctx.bezierCurveTo(cx+s*0.3, cy+s*0.6, cx-s*0.3, cy+s*0.6, cx-s*0.5, cy+s*0.4); ctx.bezierCurveTo(cx-s*0.6, cy, cx-s*0.5, cy-s*0.5, cx, cy-s*0.6); ctx.fillStyle = light; ctx.fill(); } else if (cornerType === 'acanthus cluster') { for (let l=0;l<6;l++) { const a=(l/6)*Math.PI*2; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.bezierCurveTo(cx+Math.cos(a-0.3)*s*0.4, cy+Math.sin(a-0.3)*s*0.4, cx+Math.cos(a+0.3)*s*0.6, cy+Math.sin(a+0.3)*s*0.6, cx+Math.cos(a)*s*0.7, cy+Math.sin(a)*s*0.7); ctx.strokeStyle = light; ctx.lineWidth = 2; ctx.stroke(); } ctx.beginPath(); ctx.arc(cx, cy, s*0.15, 0, Math.PI*2); ctx.fillStyle = light; ctx.fill(); } else if (cornerType === 'scroll volute') { ctx.strokeStyle = light; ctx.lineWidth = 2; for (let t=0;t<Math.PI*3;t+=0.1) { const r=s*0.1+t*s*0.06; const px=cx+Math.cos(t)*r; const py=cy+Math.sin(t)*r; if(t===0){ctx.beginPath();ctx.moveTo(px,py);}else ctx.lineTo(px,py); } ctx.stroke(); } }); ctx.globalAlpha = 1; ctx.restore(); };
 
-    drawProfileBand(ctx, rx, ry, rw, rh, pw, profile, finishColor, idx, totalProfiles);
-
-    // ornament zone mapping: A=outer quarter, B=second quarter, C=third quarter, D=inner quarter
-    const zoneIdx = Math.floor((idx / totalProfiles) * 4);
-    const zoneKey = ['A','B','C','D'][zoneIdx];
-    const ornament = frameState[`ornament${zoneKey}`];
-    if (ornament && ornament !== 'none') {
-      drawOrnaments(ctx, rx, ry, rw, rh, pw, ornament, finishColor);
-    }
-
-    inset += pw;
-  });
-
-  // corners
-  if (frameState.corners !== 'plain miter') {
-    drawCornerOrnaments(ctx, ox, oy, totalW, totalH, railWidth, frameState.corners, finishColor);
-  }
-
-  // liner
-  if (frameState.liner !== 'none') {
-    const lx = ox + railWidth;
-    const ly = oy + railWidth;
-    const lw = totalW - railWidth * 2;
-    const lh = totalH - railWidth * 2;
-    drawLiner(ctx, lx, ly, lw, lh, linerWidth, frameState.liner, finishColor);
-  }
-
-  // artwork placeholder
-  const ax = ox + railWidth + linerWidth;
-  const ay = oy + railWidth + linerWidth;
-  ctx.fillStyle = '#d4d0c8';
-  ctx.fillRect(ax, ay, artW, artH);
-  ctx.strokeStyle = '#bbb8b0';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(ax, ay, artW, artH);
-
-  // center cross
-  ctx.strokeStyle = '#c0bdb5';
-  ctx.lineWidth = 0.5;
-  ctx.beginPath();
-  ctx.moveTo(ax, ay); ctx.lineTo(ax + artW, ay + artH);
-  ctx.moveTo(ax + artW, ay); ctx.lineTo(ax, ay + artH);
-  ctx.stroke();
-
-  // aging overlay
-  if (frameState.aging !== 'none') {
-    const agingAlpha = frameState.aging === 'light' ? 0.08 : frameState.aging === 'medium' ? 0.18 : 0.3;
-    ctx.fillStyle = `rgba(30,20,10,${agingAlpha})`;
-    ctx.fillRect(ox, oy, totalW, totalH);
-
-    // extra aging in recesses
-    if (frameState.aging !== 'light') {
-      ctx.fillStyle = `rgba(20,15,5,${agingAlpha * 0.6})`;
-      const darkBand = 4;
-      ctx.fillRect(ox + railWidth - darkBand, oy + railWidth - darkBand, artW + linerWidth * 2 + darkBand * 2, darkBand);
-      ctx.fillRect(ox + railWidth - darkBand, oy + railWidth, darkBand, artH + linerWidth * 2);
-      ctx.fillRect(ox + totalW - railWidth, oy + railWidth, darkBand, artH + linerWidth * 2);
-      ctx.fillRect(ox + railWidth - darkBand, oy + totalH - railWidth, artW + linerWidth * 2 + darkBand * 2, darkBand);
-    }
-  }
-};
-
-const drawProfileBand = (ctx, rx, ry, rw, rh, pw, profile, color, idx, total) => {
-  const light = shadeColor(color, 35);
-  const mid = color;
-  const dark = shadeColor(color, -35);
-
-  // top rail
-  drawTrapezoid(ctx, rx, ry, rx + rw, ry, rx + rw - pw, ry + pw, rx + pw, ry + pw, profile, light, mid, dark, 'top');
-  // bottom rail
-  drawTrapezoid(ctx, rx + pw, ry + rh - pw, rx + rw - pw, ry + rh - pw, rx + rw, ry + rh, rx, ry + rh, profile, light, mid, dark, 'bottom');
-  // left rail
-  drawTrapezoid(ctx, rx, ry, rx + pw, ry + pw, rx + pw, ry + rh - pw, rx, ry + rh, profile, light, mid, dark, 'left');
-  // right rail
-  drawTrapezoid(ctx, rx + rw - pw, ry + pw, rx + rw, ry, rx + rw, ry + rh, rx + rw - pw, ry + rh - pw, profile, light, mid, dark, 'right');
-};
-
-const drawTrapezoid = (ctx, x1, y1, x2, y2, x3, y3, x4, y4, profile, light, mid, dark, side) => {
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.lineTo(x3, y3);
-  ctx.lineTo(x4, y4);
-  ctx.closePath();
-
-  if (profile === 'flat') {
-    ctx.fillStyle = mid;
-    ctx.fill();
-  } else if (profile === 'ogee') {
-    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
-    grad.addColorStop(0, light);
-    grad.addColorStop(0.4, mid);
-    grad.addColorStop(1, dark);
-    ctx.fillStyle = grad;
-    ctx.fill();
-  } else if (profile === 'cushion') {
-    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
-    grad.addColorStop(0, mid);
-    grad.addColorStop(0.5, light);
-    grad.addColorStop(1, mid);
-    ctx.fillStyle = grad;
-    ctx.fill();
-  } else if (profile === 'scoop') {
-    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
-    grad.addColorStop(0, mid);
-    grad.addColorStop(0.5, dark);
-    grad.addColorStop(1, mid);
-    ctx.fillStyle = grad;
-    ctx.fill();
-  } else if (profile === 'reverse scoop') {
-    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
-    grad.addColorStop(0, dark);
-    grad.addColorStop(0.5, light);
-    grad.addColorStop(1, dark);
-    ctx.fillStyle = grad;
-    ctx.fill();
-  } else if (profile === 'bead') {
-    ctx.fillStyle = mid;
-    ctx.fill();
-    // highlight dots
-    const cx = (x1 + x2 + x3 + x4) / 4;
-    const cy = (y1 + y2 + y3 + y4) / 4;
-    const len = side === 'top' || side === 'bottom' ? Math.abs(x2 - x1) : Math.abs(y4 - y1);
-    const count = Math.floor(len / 12);
-    ctx.fillStyle = light;
-    for (let i = 0; i < count; i++) {
-      const t = i / count;
-      let px, py;
-      if (side === 'top') { px = x1 + (x2 - x1) * t + (x4 - x1 + (x3 - x2 - x4 + x1) * t) * 0.5; py = y1 + (y4 - y1) * 0.5; }
-      else if (side === 'bottom') { px = x4 + (x3 - x4) * t + (x1 - x4 + (x2 - x3 - x1 + x4) * t) * 0.5; py = y4 + (y1 - y4) * 0.5; }
-      else if (side === 'left') { px = x1 + (x4 - x1) * 0.5; py = y1 + (y4 - y1) * t; }
-      else { px = x2 + (x3 - x2) * 0.5; py = y2 + (y3 - y2) * t; }
-      ctx.beginPath();
-      ctx.arc(px, py, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  } else if (profile === 'bolection') {
-    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
-    grad.addColorStop(0, light);
-    grad.addColorStop(0.3, mid);
-    grad.addColorStop(0.7, dark);
-    grad.addColorStop(1, shadeColor(dark, -15));
-    ctx.fillStyle = grad;
-    ctx.fill();
-  } else if (profile === 'fillet') {
-    ctx.fillStyle = mid;
-    ctx.fill();
-    ctx.strokeStyle = light;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  } else if (profile === 'astragal') {
-    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
-    grad.addColorStop(0, light);
-    grad.addColorStop(0.5, mid);
-    grad.addColorStop(1, dark);
-    ctx.fillStyle = grad;
-    ctx.fill();
-    // center bead highlight
-    ctx.strokeStyle = shadeColor(light, 15);
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    if (side === 'top' || side === 'bottom') {
-      const my = (y1 + y4) / 2;
-      ctx.moveTo(x1, my); ctx.lineTo(x2, my);
-    } else {
-      const mx = (x1 + x2) / 2;
-      ctx.moveTo(mx, y1); ctx.lineTo(mx, y4);
-    }
-    ctx.stroke();
-  } else if (profile === 'cavetto') {
-    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
-    grad.addColorStop(0, mid);
-    grad.addColorStop(1, dark);
-    ctx.fillStyle = grad;
-    ctx.fill();
-  } else if (profile === 'scotia') {
-    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
-    grad.addColorStop(0, dark);
-    grad.addColorStop(0.7, mid);
-    grad.addColorStop(1, light);
-    ctx.fillStyle = grad;
-    ctx.fill();
-  } else if (profile === 'chamfer') {
-    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
-    grad.addColorStop(0, light);
-    grad.addColorStop(1, mid);
-    ctx.fillStyle = grad;
-    ctx.fill();
-  } else if (profile === 'bevel') {
-    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
-    grad.addColorStop(0, light);
-    grad.addColorStop(1, dark);
-    ctx.fillStyle = grad;
-    ctx.fill();
-  } else if (profile === 'torus') {
-    const grad = createSideGradient(ctx, x1, y1, x3, y3, side);
-    grad.addColorStop(0, mid);
-    grad.addColorStop(0.3, light);
-    grad.addColorStop(0.7, light);
-    grad.addColorStop(1, mid);
-    ctx.fillStyle = grad;
-    ctx.fill();
-  } else if (profile === 'quirk') {
-    ctx.fillStyle = mid;
-    ctx.fill();
-    ctx.strokeStyle = dark;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    if (side === 'top' || side === 'bottom') {
-      const my = (y1 + y4) / 2;
-      ctx.moveTo(x1, my); ctx.lineTo(x2, my);
-    } else {
-      const mx = (x1 + x2) / 2;
-      ctx.moveTo(mx, y1); ctx.lineTo(mx, y4);
-    }
-    ctx.stroke();
-  } else {
-    ctx.fillStyle = mid;
-    ctx.fill();
-  }
-};
-
-const createSideGradient = (ctx, x1, y1, x3, y3, side) => {
-  if (side === 'top') return ctx.createLinearGradient(0, y1, 0, y3);
-  if (side === 'bottom') return ctx.createLinearGradient(0, y3, 0, y1);
-  if (side === 'left') return ctx.createLinearGradient(x1, 0, x3, 0);
-  return ctx.createLinearGradient(x3, 0, x1, 0);
-};
-
-const drawOrnaments = (ctx, rx, ry, rw, rh, pw, ornament, color) => {
-  const light = shadeColor(color, 30);
-  const dark = shadeColor(color, -20);
-  const midY = ry + pw / 2;
-  const midX = rx + pw / 2;
-  const spacing = ornament === 'greek key' ? 24 : ornament === 'guilloche' ? 20 : 16;
-
-  ctx.save();
-  ctx.fillStyle = light;
-  ctx.strokeStyle = dark;
-  ctx.lineWidth = 1;
-  ctx.globalAlpha = 0.6;
-
-  // top rail ornaments
-  const topY = ry + pw * 0.4;
-  for (let ox = rx + pw + spacing; ox < rx + rw - pw - spacing; ox += spacing) {
-    drawSingleOrnament(ctx, ox, topY, ornament, light, dark, pw * 0.3);
-  }
-
-  // bottom rail
-  const botY = ry + rh - pw * 0.6;
-  for (let ox = rx + pw + spacing; ox < rx + rw - pw - spacing; ox += spacing) {
-    drawSingleOrnament(ctx, ox, botY, ornament, light, dark, pw * 0.3);
-  }
-
-  // left rail
-  const leftX = rx + pw * 0.4;
-  for (let oy = ry + pw + spacing; oy < ry + rh - pw - spacing; oy += spacing) {
-    drawSingleOrnament(ctx, leftX, oy, ornament, light, dark, pw * 0.3);
-  }
-
-  // right rail
-  const rightX = rx + rw - pw * 0.6;
-  for (let oy = ry + pw + spacing; oy < ry + rh - pw - spacing; oy += spacing) {
-    drawSingleOrnament(ctx, rightX, oy, ornament, light, dark, pw * 0.3);
-  }
-
-  ctx.globalAlpha = 1;
-  ctx.restore();
-};
-
-const drawSingleOrnament = (ctx, x, y, type, light, dark, scale) => {
-  const s = Math.max(3, scale);
-
-  if (type === 'bead') {
-    ctx.beginPath();
-    ctx.arc(x, y, s * 0.4, 0, Math.PI * 2);
-    ctx.fillStyle = light;
-    ctx.fill();
-  } else if (type === 'bead & reel') {
-    ctx.beginPath();
-    ctx.arc(x, y, s * 0.35, 0, Math.PI * 2);
-    ctx.fillStyle = light;
-    ctx.fill();
-    ctx.fillStyle = dark;
-    ctx.fillRect(x + s * 0.5, y - s * 0.15, s * 0.3, s * 0.3);
-  } else if (type === 'egg-and-dart') {
-    // egg
-    ctx.beginPath();
-    ctx.ellipse(x, y, s * 0.35, s * 0.5, 0, 0, Math.PI * 2);
-    ctx.fillStyle = light;
-    ctx.fill();
-    // dart
-    ctx.beginPath();
-    ctx.moveTo(x + s * 0.6, y - s * 0.4);
-    ctx.lineTo(x + s * 0.7, y);
-    ctx.lineTo(x + s * 0.6, y + s * 0.4);
-    ctx.fillStyle = dark;
-    ctx.fill();
-  } else if (type === 'acanthus') {
-    ctx.beginPath();
-    ctx.moveTo(x, y - s * 0.5);
-    ctx.bezierCurveTo(x + s * 0.4, y - s * 0.3, x + s * 0.5, y, x + s * 0.3, y + s * 0.4);
-    ctx.bezierCurveTo(x + s * 0.1, y + s * 0.5, x - s * 0.1, y + s * 0.5, x - s * 0.3, y + s * 0.4);
-    ctx.bezierCurveTo(x - s * 0.5, y, x - s * 0.4, y - s * 0.3, x, y - s * 0.5);
-    ctx.fillStyle = light;
-    ctx.fill();
-  } else if (type === 'scrolls') {
-    ctx.beginPath();
-    ctx.arc(x, y - s * 0.2, s * 0.35, 0, Math.PI, false);
-    ctx.strokeStyle = light;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(x, y + s * 0.2, s * 0.25, Math.PI, 0, false);
-    ctx.stroke();
-  } else if (type === 'shell') {
-    ctx.beginPath();
-    ctx.arc(x, y + s * 0.2, s * 0.5, Math.PI, 0, false);
-    ctx.fillStyle = light;
-    ctx.fill();
-    // ribs
-    for (let i = 0; i < 5; i++) {
-      const a = Math.PI + (i / 4) * Math.PI;
-      ctx.beginPath();
-      ctx.moveTo(x, y + s * 0.2);
-      ctx.lineTo(x + Math.cos(a) * s * 0.5, y + s * 0.2 + Math.sin(a) * s * 0.5);
-      ctx.strokeStyle = dark;
-      ctx.lineWidth = 0.5;
-      ctx.stroke();
-    }
-  } else if (type === 'rope') {
-    ctx.beginPath();
-    ctx.moveTo(x - s * 0.4, y - s * 0.15);
-    ctx.bezierCurveTo(x - s * 0.2, y - s * 0.4, x + s * 0.2, y + s * 0.4, x + s * 0.4, y + s * 0.15);
-    ctx.strokeStyle = light;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  } else if (type === 'laurel') {
-    for (let side = -1; side <= 1; side += 2) {
-      ctx.beginPath();
-      ctx.ellipse(x + side * s * 0.25, y, s * 0.2, s * 0.4, side * 0.3, 0, Math.PI * 2);
-      ctx.fillStyle = light;
-      ctx.fill();
-    }
-  } else if (type === 'greek key') {
-    ctx.strokeStyle = light;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(x - s * 0.4, y - s * 0.4);
-    ctx.lineTo(x + s * 0.4, y - s * 0.4);
-    ctx.lineTo(x + s * 0.4, y + s * 0.1);
-    ctx.lineTo(x - s * 0.1, y + s * 0.1);
-    ctx.lineTo(x - s * 0.1, y + s * 0.4);
-    ctx.lineTo(x - s * 0.4, y + s * 0.4);
-    ctx.stroke();
-  } else if (type === 'guilloche') {
-    ctx.strokeStyle = light;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(x, y, s * 0.35, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(x, y, s * 0.2, 0, Math.PI * 2);
-    ctx.stroke();
-  } else if (type === 'floral') {
-    for (let p = 0; p < 5; p++) {
-      const a = (p / 5) * Math.PI * 2;
-      ctx.beginPath();
-      ctx.ellipse(x + Math.cos(a) * s * 0.25, y + Math.sin(a) * s * 0.25, s * 0.18, s * 0.1, a, 0, Math.PI * 2);
-      ctx.fillStyle = light;
-      ctx.fill();
-    }
-    ctx.beginPath();
-    ctx.arc(x, y, s * 0.12, 0, Math.PI * 2);
-    ctx.fillStyle = dark;
-    ctx.fill();
-  } else if (type === 'vine') {
-    ctx.strokeStyle = light;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x - s * 0.5, y);
-    ctx.bezierCurveTo(x - s * 0.2, y - s * 0.3, x + s * 0.2, y + s * 0.3, x + s * 0.5, y);
-    ctx.stroke();
-    // small leaf
-    ctx.beginPath();
-    ctx.ellipse(x, y - s * 0.15, s * 0.12, s * 0.08, -0.5, 0, Math.PI * 2);
-    ctx.fillStyle = light;
-    ctx.fill();
-  }
-};
-
-const drawCornerOrnaments = (ctx, ox, oy, tw, th, railW, cornerType, color) => {
-  const light = shadeColor(color, 35);
-  const dark = shadeColor(color, -20);
-  const s = railW * 0.4;
-
-  const corners = [
-    [ox + railW * 0.5, oy + railW * 0.5],
-    [ox + tw - railW * 0.5, oy + railW * 0.5],
-    [ox + tw - railW * 0.5, oy + th - railW * 0.5],
-    [ox + railW * 0.5, oy + th - railW * 0.5]
-  ];
-
-  ctx.save();
-  ctx.globalAlpha = 0.7;
-
-  corners.forEach(([cx, cy]) => {
-    if (cornerType === 'floral burst') {
-      for (let p = 0; p < 8; p++) {
-        const a = (p / 8) * Math.PI * 2;
-        ctx.beginPath();
-        ctx.ellipse(cx + Math.cos(a) * s * 0.5, cy + Math.sin(a) * s * 0.5, s * 0.35, s * 0.15, a, 0, Math.PI * 2);
-        ctx.fillStyle = light;
-        ctx.fill();
-      }
-      ctx.beginPath();
-      ctx.arc(cx, cy, s * 0.25, 0, Math.PI * 2);
-      ctx.fillStyle = dark;
-      ctx.fill();
-    } else if (cornerType === 'shell') {
-      ctx.beginPath();
-      ctx.arc(cx, cy, s * 0.7, 0, Math.PI * 2);
-      ctx.fillStyle = light;
-      ctx.fill();
-      for (let r = 0; r < 8; r++) {
-        const a = (r / 8) * Math.PI * 2;
-        ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.lineTo(cx + Math.cos(a) * s * 0.7, cy + Math.sin(a) * s * 0.7);
-        ctx.strokeStyle = dark;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-    } else if (cornerType === 'cartouche') {
-      ctx.beginPath();
-      ctx.moveTo(cx, cy - s * 0.6);
-      ctx.bezierCurveTo(cx + s * 0.5, cy - s * 0.5, cx + s * 0.6, cy, cx + s * 0.5, cy + s * 0.4);
-      ctx.bezierCurveTo(cx + s * 0.3, cy + s * 0.6, cx - s * 0.3, cy + s * 0.6, cx - s * 0.5, cy + s * 0.4);
-      ctx.bezierCurveTo(cx - s * 0.6, cy, cx - s * 0.5, cy - s * 0.5, cx, cy - s * 0.6);
-      ctx.fillStyle = light;
-      ctx.fill();
-    } else if (cornerType === 'acanthus cluster') {
-      for (let l = 0; l < 6; l++) {
-        const a = (l / 6) * Math.PI * 2;
-        ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.bezierCurveTo(
-          cx + Math.cos(a - 0.3) * s * 0.4, cy + Math.sin(a - 0.3) * s * 0.4,
-          cx + Math.cos(a + 0.3) * s * 0.6, cy + Math.sin(a + 0.3) * s * 0.6,
-          cx + Math.cos(a) * s * 0.7, cy + Math.sin(a) * s * 0.7
-        );
-        ctx.strokeStyle = light;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-      ctx.beginPath();
-      ctx.arc(cx, cy, s * 0.15, 0, Math.PI * 2);
-      ctx.fillStyle = light;
-      ctx.fill();
-    } else if (cornerType === 'scroll volute') {
-      ctx.strokeStyle = light;
-      ctx.lineWidth = 2;
-      for (let t = 0; t < Math.PI * 3; t += 0.1) {
-        const r = s * 0.1 + t * s * 0.06;
-        const px = cx + Math.cos(t) * r;
-        const py = cy + Math.sin(t) * r;
-        if (t === 0) { ctx.beginPath(); ctx.moveTo(px, py); }
-        else ctx.lineTo(px, py);
-      }
-      ctx.stroke();
-    }
-  });
-
-  ctx.globalAlpha = 1;
-  ctx.restore();
-};
-
-const drawLiner = (ctx, lx, ly, lw, lh, linerW, linerType, frameColor) => {
-  const colors = {
-    'linen': '#f5f0e6',
-    'velvet': '#4a0028',
-    'gold liner': '#daa520'
-  };
-  const c = colors[linerType] || '#f5f0e6';
-  const light = shadeColor(c, 15);
-  const dark = shadeColor(c, -15);
-
-  // outer edge
-  ctx.fillStyle = dark;
-  ctx.fillRect(lx, ly, lw, linerW); // top
-  ctx.fillRect(lx, ly + lh - linerW, lw, linerW); // bottom
-  ctx.fillRect(lx, ly, linerW, lh); // left
-  ctx.fillRect(lx + lw - linerW, ly, linerW, lh); // right
-
-  // inner lighter
-  const i = 3;
-  ctx.fillStyle = c;
-  ctx.fillRect(lx + i, ly + i, lw - i * 2, linerW - i * 2);
-  ctx.fillRect(lx + i, ly + lh - linerW + i, lw - i * 2, linerW - i * 2);
-  ctx.fillRect(lx + i, ly + i, linerW - i * 2, lh - i * 2);
-  ctx.fillRect(lx + lw - linerW + i, ly + i, linerW - i * 2, lh - i * 2);
-
-  // texture for linen
-  if (linerType === 'linen') {
-    ctx.globalAlpha = 0.1;
-    ctx.strokeStyle = dark;
-    ctx.lineWidth = 0.5;
-    for (let tx = lx; tx < lx + lw; tx += 3) {
-      ctx.beginPath(); ctx.moveTo(tx, ly); ctx.lineTo(tx, ly + linerW); ctx.stroke();
-    }
-    for (let ty = ly + lh - linerW; ty < ly + lh; ty += 3) {
-      ctx.beginPath(); ctx.moveTo(lx, ty); ctx.lineTo(lx + lw, ty); ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-  }
-};
+const drawLiner = (ctx, lx, ly, lw, lh, linerW, linerType, frameColor) => { const colors = {'linen':'#f5f0e6','velvet':'#4a0028','gold liner':'#daa520'}; const c = colors[linerType] || '#f5f0e6'; const light = shadeColor(c, 15); const dark = shadeColor(c, -15); ctx.fillStyle = dark; ctx.fillRect(lx, ly, lw, linerW); ctx.fillRect(lx, ly+lh-linerW, lw, linerW); ctx.fillRect(lx, ly, linerW, lh); ctx.fillRect(lx+lw-linerW, ly, linerW, lh); const i = 3; ctx.fillStyle = c; ctx.fillRect(lx+i, ly+i, lw-i*2, linerW-i*2); ctx.fillRect(lx+i, ly+lh-linerW+i, lw-i*2, linerW-i*2); ctx.fillRect(lx+i, ly+i, linerW-i*2, lh-i*2); ctx.fillRect(lx+lw-linerW+i, ly+i, linerW-i*2, lh-i*2); if (linerType === 'linen') { ctx.globalAlpha = 0.1; ctx.strokeStyle = dark; ctx.lineWidth = 0.5; for (let tx=lx;tx<lx+lw;tx+=3){ctx.beginPath();ctx.moveTo(tx,ly);ctx.lineTo(tx,ly+linerW);ctx.stroke();} for (let ty=ly+lh-linerW;ty<ly+lh;ty+=3){ctx.beginPath();ctx.moveTo(lx,ty);ctx.lineTo(lx+lw,ty);ctx.stroke();} ctx.globalAlpha = 1; } };
 
 // ════════════════════════════════════════════════════════════════
 // rendering
@@ -1823,63 +888,45 @@ const canvas = $('#canvas');
 const ctx = canvas.getContext('2d');
 let renderQueued = false;
 
-const render = () => {
-  renderQueued = false;
+const render = () => { renderQueued = false; if (currentMode === 'background') { canvas.width = bgState.width; canvas.height = bgState.height; drawWall(ctx, bgState.width, bgState.height); } else { const artW = frameState.width; const artH = frameState.height; const profiles = frameState.profiles; const totalProfiles = profiles.length || 1; const railWidth = Math.max(30, Math.min(120, Math.max(artW, artH) * 0.12)); const linerWidth = frameState.liner !== 'none' ? 12 : 0; const totalW = artW + (railWidth + linerWidth) * 2; const totalH = artH + (railWidth + linerWidth) * 2; const pad = 40; canvas.width = totalW + pad * 2; canvas.height = totalH + pad * 2; drawFrame(ctx, canvas.width, canvas.height); } };
 
-  if (currentMode === 'background') {
-    canvas.width = bgState.width;
-    canvas.height = bgState.height;
-    drawWall(ctx, bgState.width, bgState.height);
-  } else {
-    const artW = frameState.width;
-    const artH = frameState.height;
-    const profiles = frameState.profiles;
-    const totalProfiles = profiles.length || 1;
-    const railWidth = Math.max(30, Math.min(120, Math.max(artW, artH) * 0.12));
-    const linerWidth = frameState.liner !== 'none' ? 12 : 0;
-    const totalW = artW + (railWidth + linerWidth) * 2;
-    const totalH = artH + (railWidth + linerWidth) * 2;
-    const pad = 40;
-    canvas.width = totalW + pad * 2;
-    canvas.height = totalH + pad * 2;
-    drawFrame(ctx, canvas.width, canvas.height);
-  }
-};
-
-const scheduleRender = () => {
-  if (!renderQueued) {
-    renderQueued = true;
-    requestAnimationFrame(render);
-  }
-};
+const scheduleRender = () => { if (!renderQueued) { renderQueued = true; requestAnimationFrame(render); } };
 
 // ════════════════════════════════════════════════════════════════
 // top-level event wiring
 // ════════════════════════════════════════════════════════════════
 
-// mode toggle
-$$('.mode-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    $$('.mode-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentMode = btn.dataset.mode;
-    rebuildControls();
-    scheduleRender();
-  });
-});
+$$('.mode-btn').forEach(btn => { btn.addEventListener('click', () => { $$('.mode-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentMode = btn.dataset.mode; rebuildControls(); scheduleRender(); }); });
 
-// generate button
-$('#btn-generate').addEventListener('click', () => {
-  render();
-});
+$('#btn-generate').addEventListener('click', () => { render(); });
 
-// download button
-$('#btn-download').addEventListener('click', () => {
-  const link = document.createElement('a');
-  link.download = `framewall-${currentMode}.png`;
-  link.href = canvas.toDataURL('image/png');
-  link.click();
-});
+// ════════════════════════════════════════════════════════════════
+// export system
+// ════════════════════════════════════════════════════════════════
+
+const exportDropdown = $('#export-dropdown');
+$('#btn-export').addEventListener('click', (e) => { e.stopPropagation(); exportDropdown.classList.toggle('open'); });
+document.addEventListener('click', () => exportDropdown.classList.remove('open'));
+exportDropdown.addEventListener('click', (e) => e.stopPropagation());
+
+const downloadBlob = (blob, filename) => { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url); };
+const downloadText = (text, filename, mime) => downloadBlob(new Blob([text], { type: mime }), filename);
+const getFilename = (ext) => `framewall-${currentMode}-${Date.now()}.${ext}`;
+
+const exportPNG = () => canvas.toBlob((blob) => downloadBlob(blob, getFilename('png')), 'image/png');
+
+const exportJPEG = () => { const tmp = document.createElement('canvas'); tmp.width = canvas.width; tmp.height = canvas.height; const tctx = tmp.getContext('2d'); tctx.fillStyle = '#ffffff'; tctx.fillRect(0, 0, tmp.width, tmp.height); tctx.drawImage(canvas, 0, 0); tmp.toBlob((blob) => downloadBlob(blob, getFilename('jpg')), 'image/jpeg', 0.92); };
+
+const exportSVG = () => { const w = canvas.width, h = canvas.height; const els = []; const svgRect = (x,y,rw,rh,fill,op) => { let a=`x="${x}" y="${y}" width="${rw}" height="${rh}" fill="${fill}"`; if(op<1) a+=` opacity="${op.toFixed(3)}"`; els.push(`<rect ${a}/>`); }; const svgEllipse = (cx,cy,rx,ry,fill,op,rot) => { let a=`cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${fill}"`; if(op<1) a+=` opacity="${op.toFixed(3)}"`; if(rot) a+=` transform="rotate(${rot} ${cx} ${cy})"`; els.push(`<ellipse ${a}/>`); }; const svgCircle = (cx,cy,r,fill,op) => { let a=`cx="${cx}" cy="${cy}" r="${r}" fill="${fill}"`; if(op<1) a+=` opacity="${op.toFixed(3)}"`; els.push(`<circle ${a}/>`); }; const svgLine = (x1,y1,x2,y2,stroke,sw,op) => { let a=`x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${sw}"`; if(op<1) a+=` opacity="${op.toFixed(3)}"`; els.push(`<line ${a}/>`); };
+if (currentMode === 'background') { const wc = bgState.wallColor; const rand = seededRandom(42); svgRect(0,0,w,h,wc,1); const baseH=bgState.baseboardEnabled?30:0, divH=bgState.dividerEnabled?20:0, lwH=bgState.lowerEnabled?h*0.32:0; const wallB=h-lwH-divH-baseH; if(bgState.wallType==='painted'){for(let i=0;i<200;i++) svgRect(rand()*w,rand()*wallB,2,2,rand()>0.5?'#fff':'#000',0.025);} else if(bgState.wallType==='wallpaper'){const lt=shadeColor(wc,20),dk=shadeColor(wc,-15); if(['damask','flock','brocade',''].includes(bgState.wallSubType)){const spX=bgState.wallSubType==='flock'?160:180,spY=bgState.wallSubType==='flock'?180:200;const al=bgState.wallSubType==='flock'?0.55:0.4;for(let r=0;r<wallB/spY+1;r++) for(let c=-1;c<w/spX+1;c++){const cx=c*spX+(r%2===0?0:spX/2),cy=r*spY;svgEllipse(cx,cy,45,70,lt,al);svgCircle(cx,cy-85,4,dk,al);svgCircle(cx,cy+85,4,dk,al);}} else if(bgState.wallSubType==='stripes'){for(let sx=0;sx<w;sx+=80) svgRect(sx,0,40,wallB,lt,0.25);} else if(bgState.wallSubType==='morris'){for(let r=0;r<wallB/140+1;r++) for(let c=-1;c<w/140+1;c++){const cx=c*140+(r%2===0?0:70),cy=r*140;svgLine(cx,cy+50,cx,cy-50,dk,2,0.35);svgEllipse(cx-20,cy-10,18,8,lt,0.35,30);svgEllipse(cx+20,cy-10,18,8,lt,0.35,-30);svgCircle(cx,cy-45,6,dk,0.35);}} else if(bgState.wallSubType==='toile'){for(let r=0;r<wallB/200+1;r++) for(let c=-1;c<w/200+1;c++){const cx=c*200+(r%2===0?0:80),cy=r*200;svgEllipse(cx,cy,20,30,dk,0.2);svgRect(cx+25,cy-15,30,25,dk,0.15);}} else if(bgState.wallSubType==='leather'){for(let r=0;r<wallB/80+1;r++) for(let c=0;c<w/80+1;c++){els.push(`<rect x="${c*80+4}" y="${r*80+4}" width="72" height="72" fill="none" stroke="${dk}" stroke-width="2"/>`);}}} else if(bgState.wallType==='wood'){for(let py=0;py<wallB;py+=40){svgRect(0,py,w,39,shadeColor(wc,(py/40)%2===0?8:-8),0.5);svgRect(0,py+38,w,1,shadeColor(wc,-20),0.3);}} else if(bgState.wallType==='fabric'){if(bgState.wallSubType==='silk') for(let py=0;py<wallB;py+=6) svgRect(0,py,w,1,shadeColor(wc,15),0.1); else if(bgState.wallSubType==='linen'){for(let py=0;py<wallB;py+=4) svgRect(0,py,w,1,shadeColor(wc,-10),0.08);for(let px=0;px<w;px+=4) svgRect(px,0,1,wallB,shadeColor(wc,-10),0.08);}}
+if(bgState.lowerEnabled){const ly=h-lwH-baseH;svgRect(0,ly,w,lwH,bgState.lowerColor,1);if(bgState.lowerType==='beadboard') for(let bx=0;bx<w;bx+=20) svgRect(bx,ly,1,lwH,shadeColor(bgState.lowerColor,-20),0.3); else if(bgState.lowerType==='raised panel'||bgState.lowerType==='flat panel') for(let px=25;px+160<w;px+=185) svgRect(px,ly+15,160,lwH-30,shadeColor(bgState.lowerColor,5),0.5); else if(bgState.lowerType==='board & batten') for(let bx=0;bx<w;bx+=80) svgRect(bx+37,ly,6,lwH,shadeColor(bgState.lowerColor,-12),0.5); else if(bgState.lowerType==='stone') for(let row=0;row*40<lwH;row++) for(let sx=-100+(row%2===0?0:50);sx<w;sx+=100) svgRect(sx+1,ly+row*40+1,98,38,shadeColor(bgState.lowerColor,row%3*5),0.3);}
+if(bgState.dividerEnabled){const dy=h-lwH-divH-baseH;svgRect(0,dy,w,divH,shadeColor(wc,30),1);svgRect(0,dy,w,2,shadeColor(wc,50),0.6);} if(bgState.baseboardEnabled){svgRect(0,h-baseH,w,baseH,bgState.baseboardColor,1);svgRect(0,h-baseH,w,2,shadeColor(bgState.baseboardColor,25),0.5);}
+} else { const aW=frameState.width,aH=frameState.height; const rW=Math.max(30,Math.min(120,Math.max(aW,aH)*0.12)); const liW=frameState.liner!=='none'?12:0; const tW=aW+(rW+liW)*2,tH=aH+(rW+liW)*2,pad=40; const fc=PAL.frameFinishes[frameState.finish]||'#DAA520',lt=shadeColor(fc,25),dk=shadeColor(fc,-25); const bc=frameState.profiles.length||1,bW=rW/bc; for(let b=0;b<bc;b++){const bo=b*bW,iw=tW-2*bo,ih=tH-2*bo,sh=b%2===0?lt:dk; svgRect(pad+bo,pad+bo,iw,bW,sh,1);svgRect(pad+bo,pad+bo+ih-bW,iw,bW,sh,1);svgRect(pad+bo,pad+bo+bW,bW,ih-2*bW,sh,1);svgRect(pad+bo+iw-bW,pad+bo+bW,bW,ih-2*bW,sh,1);} if(frameState.liner!=='none'){const lc={linen:'#f5f0e6',velvet:'#4a0028','gold liner':'#daa520'}[frameState.liner]||'#f5f0e6'; svgRect(pad+rW,pad+rW,tW-2*rW,liW,lc,0.9);svgRect(pad+rW,pad+tH-rW-liW,tW-2*rW,liW,lc,0.9);svgRect(pad+rW,pad+rW+liW,liW,tH-2*rW-2*liW,lc,0.9);svgRect(pad+rW+tW-2*rW-liW,pad+rW+liW,liW,tH-2*rW-2*liW,lc,0.9);} svgRect(pad+rW+liW,pad+rW+liW,aW,aH,'#f5f0e1',0.85); if(frameState.aging!=='none') svgRect(pad,pad,tW,tH,'#1a1000',{light:0.06,medium:0.12,heavy:0.22}[frameState.aging]||0); if(frameState.corners!=='plain miter'){const cm=rW/2,cs=rW*0.3;[[pad+cm,pad+cm],[pad+tW-cm,pad+cm],[pad+cm,pad+tH-cm],[pad+tW-cm,pad+tH-cm]].forEach(([cx,cy])=>{svgCircle(cx,cy,cs,lt,0.7);svgCircle(cx,cy,cs*0.4,dk,0.5);});} }
+downloadText(`<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">\n${els.join('\n')}\n</svg>`, getFilename('svg'), 'image/svg+xml'); };
+
+const exportHTML = () => { const w=canvas.width,h=canvas.height; let styles='',divs='',idx=0; const addDiv=(x,y,dw,dh,bg,op,extra='')=>{const id=`el-${idx++}`;styles+=`#${id}{position:absolute;left:${x}px;top:${y}px;width:${dw}px;height:${dh}px;background:${bg};${op<1?`opacity:${op.toFixed(3)};`:''}${extra}}\n`;divs+=`<div id="${id}"></div>\n`;}; if(currentMode==='background'){addDiv(0,0,w,h,bgState.wallColor,1);const bH=bgState.baseboardEnabled?30:0,dH=bgState.dividerEnabled?20:0,lH=bgState.lowerEnabled?Math.round(h*0.32):0; if(bgState.wallType==='wallpaper'&&bgState.wallSubType==='stripes'){const wb=h-lH-dH-bH;for(let sx=0;sx<w;sx+=80) addDiv(sx,0,40,wb,shadeColor(bgState.wallColor,20),0.25);} else if(bgState.wallType==='wood'){const wb=h-lH-dH-bH;for(let py=0;py<wb;py+=40) addDiv(0,py,w,39,shadeColor(bgState.wallColor,(py/40)%2===0?8:-8),0.5);} if(bgState.lowerEnabled){const ly=h-lH-bH;addDiv(0,ly,w,lH,bgState.lowerColor,1);if(bgState.lowerType==='beadboard') for(let bx=0;bx<w;bx+=20) addDiv(bx,ly,1,lH,shadeColor(bgState.lowerColor,-20),0.3); else if(bgState.lowerType==='raised panel') for(let px=25;px+160<w;px+=185) addDiv(px,ly+15,160,lH-30,shadeColor(bgState.lowerColor,5),0.5,`border:2px solid ${shadeColor(bgState.lowerColor,-10)};box-sizing:border-box;`);} if(bgState.dividerEnabled){const dy=h-lH-dH-bH;addDiv(0,dy,w,dH,shadeColor(bgState.wallColor,30),1);addDiv(0,dy,w,2,shadeColor(bgState.wallColor,50),0.6);} if(bgState.baseboardEnabled){addDiv(0,h-bH,w,bH,bgState.baseboardColor,1);addDiv(0,h-bH,w,2,shadeColor(bgState.baseboardColor,25),0.5);}} else{const aW=frameState.width,aH=frameState.height,rW=Math.max(30,Math.min(120,Math.max(aW,aH)*0.12));const liW=frameState.liner!=='none'?12:0,tW=aW+(rW+liW)*2,tH=aH+(rW+liW)*2,pad=40;const fc=PAL.frameFinishes[frameState.finish]||'#DAA520',lt=shadeColor(fc,25),dk=shadeColor(fc,-25);const bc=frameState.profiles.length||1,bW=rW/bc; for(let b=0;b<bc;b++){const bo=b*bW,sh=b%2===0?lt:dk,iw=tW-2*bo,ih=tH-2*bo;addDiv(pad+bo,pad+bo,iw,bW,sh,1);addDiv(pad+bo,pad+bo+ih-bW,iw,bW,sh,1);addDiv(pad+bo,pad+bo+bW,bW,ih-2*bW,sh,1);addDiv(pad+bo+iw-bW,pad+bo+bW,bW,ih-2*bW,sh,1);} addDiv(pad+rW+liW,pad+rW+liW,aW,aH,'#f5f0e1',0.85); if(frameState.aging!=='none') addDiv(pad,pad,tW,tH,'#1a1000',{light:0.06,medium:0.12,heavy:0.22}[frameState.aging]||0);} downloadText(`<!DOCTYPE html>\n<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>framewall export — ${currentMode}</title>\n<style>\nbody{margin:0;background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:100vh}\n.framewall-container{position:relative;width:${w}px;height:${h}px;overflow:hidden}\n${styles}</style></head><body>\n<div class="framewall-container">\n${divs}</div></body></html>`, getFilename('html'), 'text/html'); };
+
+$$('.export-option').forEach(opt => { opt.addEventListener('click', () => { exportDropdown.classList.remove('open'); const fmt = opt.dataset.fmt; if(fmt==='png') exportPNG(); else if(fmt==='jpeg') exportJPEG(); else if(fmt==='svg') exportSVG(); else if(fmt==='html') exportHTML(); }); });
 
 // init
 rebuildControls();
